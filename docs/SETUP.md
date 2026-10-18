@@ -2,7 +2,7 @@
 
 Supported: Apple Silicon macOS, Python 3.13 (uv selects it), uv, and Apple's Command Line Tools. Run `xcode-select --install` yourself if the tools are missing. Intel macOS, Windows and Linux native analysis are not supported by this version. No Homebrew package is required for normal analysis; SDL2 is only for rebuilding the benchmark game.
 
-After 0.1.1 is published:
+Install the package and prepare its native runtimes:
 
 ```sh
 uvx --python 3.13 --from every-app-is-open-source==0.1.1 eaos setup
@@ -35,6 +35,27 @@ For the installed package, managed files live under:
 
 When opening a program, EAOS writes `eaos-analysis/<sha256>/` **beside that program**: a read-only captured input under `input/`, a Ghidra project, session lock, analysis metadata/log, and generated evidence. Your user needs write access there. Each session analyzes its captured bytes; restart the server to pick up a changed original file. A program/Ghidra hash mismatch fails closed and preserves the affected cache.
 
+## macOS app bundles
+
+Copy the executable out of an installed `.app` before analysis. Opening its original `Contents/MacOS` path would put EAOS's cache inside the signed bundle, where writes may fail or invalidate its signature. EAOS inspects the copied executable; it does not open the app's documents or execute the app.
+
+```sh
+eaos_case="$(mktemp -d /tmp/eaos-app.XXXXXX)"
+cp /absolute/path/Example.app/Contents/MacOS/Example "$eaos_case/Example"
+lipo -archs "$eaos_case/Example"
+```
+
+Keep the copy and its adjacent evidence directory together. A universal Mach-O contains more than one architecture; choose the intended slice explicitly before analysis. For a copy listing both `x86_64` and `arm64`:
+
+```sh
+lipo "$eaos_case/Example" -thin arm64 -output "$eaos_case/Example-arm64"
+uvx --python 3.13 --from every-app-is-open-source==0.1.1 eaos call "$eaos_case/Example-arm64" open_program
+```
+
+If the executable is already a single architecture, use that copy directly. `arm64e` is a separate architecture name; this example does not establish support for it. An app's main executable may depend on frameworks and resources that are separate analysis targets.
+
+For large programs, let this terminal `open_program` call finish before connecting your MCP client to the same copied file. First analysis can exceed the client's tool timeout (180 seconds in the Codex example). The completed project is reused; interrupting an unfinished analysis may require that work to run again. Do not open the same target concurrently in the terminal and MCP server.
+
 ## First result
 
 This makes a tiny program you own. It needs only the Command Line Tools already required by setup:
@@ -66,7 +87,7 @@ Expected: **45**, computed from the recovered logic. For n below 4 it returns **
 - **Already open:** close the other server/client session. Do not delete an active lock file to bypass it.
 - **Hash mismatch / affected 0.1.0 cache:** preserve and move that specific `eaos-analysis/<sha256>/` directory aside, then restart against the original binary. The new session will create a fresh cache. Do not treat existing mismatched records as verified evidence.
 - **Client cannot find uvx:** use the absolute result of `command -v uvx` in its config and restart the client.
-- **Analysis takes time:** first analysis is synchronous and has no overall timeout. Restarting should reuse the project. Per-function decompilation is limited to 60 seconds.
+- **Analysis takes time:** first analysis is synchronous and has no overall timeout. Complete a terminal `open_program` call before attaching a client to a large program. A completed analysis is reused; an interrupted analysis may need to run again. Per-function decompilation is limited to 60 seconds.
 
 ## Uninstall
 

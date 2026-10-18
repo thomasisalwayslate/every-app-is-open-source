@@ -46,6 +46,8 @@ uvx --python 3.13 --from every-app-is-open-source==0.1.1 eaos call /absolute/pat
 
 The tool interface exposes the selected program and its evidence; it has no general file-reading or shell tool. **The Python/JVM process is not OS-sandboxed** and runs with your user's permissions. Recovered text is untrusted data. Read the [security model](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/SECURITY.md) before analyzing unfamiliar files.
 
+For an installed macOS app, [copy its executable outside the app bundle and select the intended architecture](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/docs/SETUP.md#macos-app-bundles). Complete large programs' first analysis in the terminal before connecting your client.
+
 ## Evidence and benchmark
 
 Same model for everyone (gpt-6.1-sol, high effort), fresh sessions, six questions, three runs per tool:
@@ -68,7 +70,7 @@ My first version actually lost to GhidraMCP on cost. I read the logs, cut the re
 
 [Full results](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/reports/round2/results.md) · [Every run](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/reports/round2/results.json) · [Answer-by-answer check](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/reports/round2/answer-review.json) · [Frozen protocol](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/benchmark/protocol-round2.json) · [The round I lost](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/reports/results.md)
 
-The original answer key stays private to prevent memory-only solving. Rebuilding a fresh target is now documented and checksum-pinned; exact historical timings/costs cannot be guaranteed on another machine or service run. See [benchmark preparation and limits](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/docs/BENCHMARK.md).
+The expected answers are public in the answer-by-answer review. The modified executables, altered source and executable oracle remain private. Public preparation instructions build a fresh target; the full three-tool comparison requires manual setup. See [benchmark preparation and limits](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/docs/BENCHMARK.md).
 
 ## The seven tools
 
@@ -86,7 +88,9 @@ I counted every tool call the agents made across my earlier 24 test runs and bui
 
 ## Never "exact" for a guess
 
-That was REA's worst habit: a name-based guess labelled "observed, exact." Here, every answer says what it is:
+In REA 6.5.0's JavaScript analysis, I found two false positives labelled "observed, exact": a [Map lookup classified as a network endpoint](https://github.com/morluto/rea/issues/4853) and a [local class classified as SQLite storage](https://github.com/morluto/rea/issues/4854). Both have since been fixed on REA's main branch. These were findings from an earlier JavaScript audit; the native benchmark used REA 6.7.0.
+
+Here, every answer says what it is:
 
 - **fact**: read straight from the binary
 - **computed**: worked out deterministically, like decompiled code or a decoded string

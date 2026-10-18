@@ -3,13 +3,19 @@ name: Prepare Python release
 # Deliberately manual. Pushing code or tags cannot start this workflow.
 on:
   workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish the checked artifacts from a reviewed version tag
+        type: boolean
+        required: true
+        default: false
 
 permissions:
   contents: read
 
 jobs:
   build:
-    name: Build and inspect candidates (no upload)
+    name: Build and inspect candidates (no publication)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -17,26 +23,50 @@ jobs:
         with:
           version: '0.11.8'
           enable-cache: false
+      - name: Require a matching version tag for publication
+        if: ${{ inputs.publish }}
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          python3 - <<'PYTHON'
+          import os, tomllib
+          from pathlib import Path
+          version = tomllib.loads(Path('pyproject.toml').read_text())['project']['version']
+          if os.environ['REF_TYPE'] != 'tag' or os.environ['REF_NAME'] != 'v' + version:
+              raise SystemExit('Publish requires the reviewed v' + version + ' tag; no upload was attempted.')
+          PYTHON
       - name: Build wheel and source archive
         run: uv build --python 3.13
       - name: Inspect distribution contents
         run: uv run --no-project --python 3.13 python scripts/check_distribution.py dist
-      - name: Check rejection of private material
-        run: uv run --no-project --python 3.13 python -m unittest discover -s tests -p test_distribution.py
+      - name: Run all portable tests
+        run: PYTHONPATH=src uv run --no-project --python 3.13 python -m unittest discover -s tests -v
       - name: Test installed wheel without native runtimes
         run: |
           uv venv --python 3.13 /tmp/eaos-wheel-check
           uv pip install --python /tmp/eaos-wheel-check/bin/python --no-deps dist/*.whl
+          cd /tmp
           /tmp/eaos-wheel-check/bin/eaos --help
           /tmp/eaos-wheel-check/bin/eaos setup --help
-          /tmp/eaos-wheel-check/bin/python -m unittest discover -s tests -p test_contract.py
-          /tmp/eaos-wheel-check/bin/python -m unittest discover -s tests -p test_runtime.py
+      - name: Record candidate identity
+        run: |
+          sha256sum dist/*.whl dist/*.tar.gz > SHA256SUMS
+          python3 -c 'import json, os; print(json.dumps({"commit": os.environ["GITHUB_SHA"], "run_id": os.environ["GITHUB_RUN_ID"]}))' > BUILD-INFO.json
+      - name: Keep the checked artifacts for the publisher
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: checked-python-release
+          retention-days: 7
+          path: |
+            dist/*
+            SHA256SUMS
+            BUILD-INFO.json
 
   publish:
     name: Publish to PyPI
-    # Enabled for a future manual release. Pushing this file never starts it.
-    # Run it by hand from the Actions tab when a release is ready.
-    if: ${{ github.event_name == 'workflow_dispatch' }}
+    # Explicit publish input is off by default; publishing also requires a matching tag.
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish }}
     needs: build
     runs-on: ubuntu-latest
     environment: pypi
@@ -44,12 +74,14 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
         with:
           version: '0.11.8'
           enable-cache: false
-      - run: uv build --python 3.13
-      - run: uv run --no-project --python 3.13 python scripts/check_distribution.py dist
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: checked-python-release
+      - name: Verify exact checked artifacts
+        run: sha256sum --check SHA256SUMS
       - name: Publish through PyPI OIDC
-        run: uv publish --trusted-publishing always dist/*
+        run: uv publish --trusted-publishing always dist/*.whl dist/*.tar.gz

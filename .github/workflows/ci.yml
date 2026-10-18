@@ -1,0 +1,30 @@
+name: Verify package
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e
+        with:
+          version: '0.11.8'
+          enable-cache: false
+      - run: uv build --python 3.13
+      - run: uv run --no-project --python 3.13 python scripts/check_distribution.py dist
+      - name: Unit and artifact boundary tests (no native downloads)
+        run: PYTHONPATH=src uv run --no-project --python 3.13 python -m unittest discover -s tests -v
+      - name: Installed wheel CLI smoke test
+        run: |
+          uv venv --python 3.13 /tmp/eaos-wheel-check
+          uv pip install --python /tmp/eaos-wheel-check/bin/python --no-deps dist/*.whl
+          cd /tmp
+          /tmp/eaos-wheel-check/bin/eaos --help
+          /tmp/eaos-wheel-check/bin/eaos setup --help
+      # This workflow has no publication credentials, environment, or upload step.

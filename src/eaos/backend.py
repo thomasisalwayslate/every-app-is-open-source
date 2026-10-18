@@ -9,8 +9,10 @@ import re
 import subprocess
 import sys
 import time
+import tempfile
 from pathlib import Path
 
+from .contracts import validated_tool
 from .evidence import Evidence
 from .swift import decode_small_string
 from .runtime import configure
@@ -21,9 +23,32 @@ class Backend:
         self.target = Path(target).expanduser().resolve(strict=True)
         if not self.target.is_file():
             raise ValueError("Target must be a regular file")
-        self.digest = hashlib.sha256(self.target.read_bytes()).hexdigest()
-        self.directory = self.target.parent / 'eaos-analysis' / self.digest
-        self.directory.mkdir(parents=True, exist_ok=True)
+        analysis_root = self.target.parent / 'eaos-analysis'
+        analysis_root.mkdir(exist_ok=True)
+        # Hash the bytes that Ghidra will actually import, not a path read later.
+        with tempfile.TemporaryDirectory(prefix='capture-', dir=analysis_root) as temporary:
+            captured = Path(temporary) / self.target.name
+            digest = hashlib.sha256()
+            with self.target.open('rb') as source, captured.open('wb') as output:
+                before = os.fstat(source.fileno())
+                while block := source.read(1024 * 1024):
+                    output.write(block)
+                    digest.update(block)
+                after = os.fstat(source.fileno())
+            if (before.st_size, before.st_mtime_ns, before.st_ctime_ns) != (after.st_size, after.st_mtime_ns, after.st_ctime_ns):
+                raise RuntimeError('Target changed during capture; retry with a stable file')
+            self.digest = digest.hexdigest()
+            self.directory = analysis_root / self.digest
+            snapshot_dir = self.directory / 'input'
+            snapshot_dir.mkdir(parents=True, exist_ok=True)
+            self.snapshot = snapshot_dir / self.target.name
+            if self.snapshot.exists():
+                with self.snapshot.open('rb') as existing:
+                    if hashlib.file_digest(existing, 'sha256').hexdigest() != self.digest:
+                        raise RuntimeError('Stored input snapshot is corrupt; move this analysis directory aside before retrying')
+            else:
+                captured.chmod(0o444)
+                captured.replace(self.snapshot)
         self.evidence = Evidence(self.directory / 'evidence', self.digest)
         self.program = self.project = self.consumer = self.decompiler = None
         self.lock = None
@@ -38,6 +63,13 @@ class Backend:
             self.lock.close()
             self.lock = None
             raise RuntimeError("Program is already open in another EAOS process; close it before retrying")
+        try:
+            self._load_project()
+        except BaseException:
+            self.close()
+            raise
+
+    def _load_project(self):
         tools, ghidra, jdk = configure()
         from pyghidra.launcher import HeadlessPyGhidraLauncher
         import pyghidra
@@ -55,12 +87,19 @@ class Backend:
         started = time.monotonic()
         imported = self.project.getProjectData().getFile('/'+self.target.name) is None
         if imported:
-            results = pyghidra.program_loader().project(self.project).source(str(self.target)).name(self.target.name).load()
+            results = pyghidra.program_loader().project(self.project).source(str(self.snapshot)).name(self.target.name).load()
             try:
                 results.getPrimary().save(monitor)
             finally:
                 results.close()
         self.program, self.consumer = pyghidra.consume_program(self.project, '/'+self.target.name)
+        imported_digest = str(self.program.getExecutableSHA256()).lower()
+        if imported_digest != self.digest:
+            raise RuntimeError(
+                'Ghidra program hash does not match the captured input. '
+                'The cache may be from an affected 0.1.0 session; move this '
+                'analysis directory aside and retry. Existing evidence was preserved.'
+            )
         analyzed = False
         if imported or not GhidraProgramUtilities.isAnalyzed(self.program):
             log = pyghidra.analyze(self.program)
@@ -114,6 +153,7 @@ class Backend:
         return {'address': str(fn.getEntryPoint()), 'name': str(fn.getName()),
                 'signature': str(fn.getSignature()), 'size': int(fn.getBody().getNumAddresses())}
 
+    @validated_tool('open_program')
     def open_program(self, full=False):
         self._load()
         blocks = [{'name':str(b.getName()),'start':str(b.getStart()),'end':str(b.getEnd()),
@@ -131,6 +171,7 @@ class Backend:
         return self.result('open_program','computed',data,
             ['Recovered functions/types are computed, not original source.'], preview)
 
+    @validated_tool('search')
     def search(self, kind='strings', pattern='', offset=0, limit=30, full=False):
         self._load()
         if not 0 <= offset or not 1 <= limit <= 200:
@@ -168,6 +209,7 @@ class Backend:
         return self.result('search','computed',data,
             ['Only Ghidra-defined strings/functions; other text may be absent.'], preview)
 
+    @validated_tool('inspect')
     def inspect(self, addresses, mode='decompile', full=False):
         self._load()
         if not 1 <= len(addresses) <= 8: raise ValueError('Supply 1..8 addresses')
@@ -212,6 +254,7 @@ class Backend:
         return self.result('inspect','fact' if mode=='assembly' else 'computed',rows,
             ['Pseudocode, types and call graph are computed static interpretations; indirect calls may be unresolved.'] if mode!='assembly' else [], preview)
 
+    @validated_tool('read_memory')
     def read_memory(self, address, length=64, format='hex'):
         self._load()
         if format not in {'hex','utf8','both'}: raise ValueError('format must be hex, utf8 or both')
@@ -225,6 +268,7 @@ class Backend:
         preview = {k:v for k,v in record.items() if k not in {'hex','utf8'} or format=='both' or k==format}
         return self.result('read_memory','fact',record,preview=preview)
 
+    @validated_tool('calculate')
     def calculate(self, expression):
         process = subprocess.run([sys.executable,'-I',str(Path(__file__).with_name('calculator.py'))],
             input=json.dumps({'expression':expression}),capture_output=True,text=True,timeout=4)
@@ -232,6 +276,7 @@ class Backend:
         return self.result('calculate','computed',{'expression':expression,'value':process.stdout.strip()},
             ['Arithmetic establishes the supplied expression, not whether its premises match the binary.'])
 
+    @validated_tool('decode_swift_string')
     def decode_swift_string(self, words=None, address=None):
         limitations = ['Supports Swift small String storage only; no pointer-backed or Objective-C tagged strings.']
         if address is not None:
@@ -242,5 +287,6 @@ class Backend:
         if words is None: raise ValueError('Supply words or a program address')
         return self.result('decode_swift_string','computed',decode_small_string(words),limitations)
 
+    @validated_tool('read_evidence')
     def read_evidence(self, id, offset=0, limit=12000):
         return self.evidence.read(id,offset,limit)

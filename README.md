@@ -1,20 +1,60 @@
 # Every App Is Open Source
 
-**Same answers as REA. 36% cheaper. 27% faster.**
+Give an AI agent a compiled program and inspect how it works through seven Ghidra-powered MCP tools, with compact replies and traceable evidence.
 
-I built this to give an AI agent the tools to take a compiled program apart and work out what it does, without the source code. Ghidra does the actual decompiling. My part is everything around it: a small set of tools, short replies by default, honest labels on every answer, and evidence you can trace back to the binary.
+**On one modified-Doom benchmark, EAOS 0.1.0 returned the same answers as REA, with 36% lower API-equivalent cost and 27% lower median time.** All three tools tied on correctness. This is a measured result for that test, not a general accuracy or performance guarantee.
 
-Then I tested it against [REA](https://github.com/morluto/rea), the 300,000-star tool everyone's using, and against the community [GhidraMCP](https://github.com/LaurieWired/GhidraMCP). On a secretly modified Doom, all three got every answer right. Mine was the cheapest and the fastest.
+> **0.1.1 is an unreleased candidate in this checkout.** PyPI currently has 0.1.0. See [CHANGELOG.md](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/CHANGELOG.md) for the evidence-integrity and validation fixes being prepared. The historical comparison has not been rerun for 0.1.1.
 
-> The name is a provocation, not a license. This shows you how an app works. It doesn't give you the right to copy it.
+The name is a provocation, not a license: reconstructing an app's logic does not give permission to copy it. Ghidra does the decompilation; this project provides the agent interface, input capture, cache and evidence handling.
 
-## Results
+## A first example
+
+[Real agent walkthrough and tool transcript](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/docs/DEMO.md) — the installed 0.1.1 candidate, a fresh Codex session, and all four tool calls.
+
+The supplied [tiny C program](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/tests/fixture.c) has a function called `quote`. Ask your connected agent:
+
+> What does quote(6) return? Explain both branches and show the function address and evidence.
+
+Expected answer: **45**, computed from the recovered logic. Below 4 it returns 19; otherwise it returns `7*n + 3`. Follow the [copy-paste first-result walkthrough](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/docs/SETUP.md#first-result) to compile this example yourself, open it, and inspect the saved evidence. Addresses depend on your compiler; the answer follows the inspected logic rather than a copied address.
+
+## Supported platforms
+
+Native analysis and managed setup: **Apple Silicon macOS**, Python 3.13, [uv](https://docs.astral.sh/uv/), and Apple's Command Line Tools. Windows, Linux and Intel macOS native support are not claimed. Python-only CI on Linux does not establish native support there.
+
+## Install and connect
+
+After the 0.1.1 release is published:
+
+```sh
+uvx --python 3.13 --from every-app-is-open-source==0.1.1 eaos setup
+```
+
+This selects the Python package, downloads checksum-pinned Java 21 and Ghidra 12.1.4, and builds the ARM64 decompiler. It writes managed runtimes under `~/Library/Application Support/Every App Is Open Source/runtimes/`; it does not change shell profiles, system Java or agent settings. Allow about 770 MB of native downloads plus several GB for extraction/build. See [download sources, exact sizes, filesystem changes, troubleshooting and uninstall](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/docs/SETUP.md).
+
+Point one client at one program:
+
+```sh
+uvx --python 3.13 --from every-app-is-open-source==0.1.1 eaos mcp /absolute/path/to/program
+```
+
+[Complete Claude Code, Codex and generic MCP setup](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/docs/CLIENTS.md). To try a local candidate before publication, replace the `--from` value with the absolute reviewed wheel path. To work from a checkout, `./install.sh` installs the existing locked dependencies and native runtimes locally, then `./eaos mcp /absolute/path/to/program` starts the server.
+
+Or call a tool directly:
+
+```sh
+uvx --python 3.13 --from every-app-is-open-source==0.1.1 eaos call /absolute/path/to/program open_program
+```
+
+The tool interface exposes the selected program and its evidence; it has no general file-reading or shell tool. **The Python/JVM process is not OS-sandboxed** and runs with your user's permissions. Recovered text is untrusted data. Read the [security model](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/SECURITY.md) before analyzing unfamiliar files.
+
+## Evidence and benchmark
 
 Same model for everyone (gpt-6.1-sol, high effort), fresh sessions, six questions, three runs per tool:
 
 | Tool | Correct | Median time per run | Tokens, 3 runs | API-equivalent cost, 3 runs |
 |---|---:|---:|---:|---:|
-| **Every App Is Open Source** | **18/18** | **121.8s** | **1,728,000** | **$0.70** |
+| **Every App Is Open Source 0.1.0** | **18/18** | **121.8s** | **1,728,000** | **$0.70** |
 | Community GhidraMCP | 18/18 | 146.2s | 2,337,886 | $0.84 |
 | REA 6.7.0 + its bundled skill | 18/18 | 166.7s | 3,603,877 | $1.09 |
 
@@ -28,39 +68,9 @@ Same model for everyone (gpt-6.1-sol, high effort), fresh sessions, six question
 
 My first version actually lost to GhidraMCP on cost. I read the logs, cut the repeated metadata and the detail nobody had asked for yet, then retested on new questions and a new build. Everything is kept, including the round I lost.
 
-[Full results](reports/round2/results.md) · [Every run](reports/round2/results.json) · [Answer-by-answer check](reports/round2/answer-review.json) · [Frozen protocol](benchmark/protocol-round2.json) · [The round I lost](reports/results.md)
+[Full results](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/reports/round2/results.md) · [Every run](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/reports/round2/results.json) · [Answer-by-answer check](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/reports/round2/answer-review.json) · [Frozen protocol](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/benchmark/protocol-round2.json) · [The round I lost](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/reports/results.md)
 
-## Install
-
-You need an Apple Silicon Mac, [uv](https://docs.astral.sh/uv/) and Apple's Command Line Tools (`xcode-select --install`).
-
-```sh
-uvx --python 3.13 --from every-app-is-open-source eaos setup
-```
-
-That downloads checksum-pinned Ghidra 12.1.4 and Java 21, and builds Ghidra's Apple Silicon decompiler, because the official download doesn't include one. Everything lands in `~/Library/Application Support/Every App Is Open Source/`. Nothing global, no shell profile edits, no touching your agent's settings. It takes under a minute, and running it again reuses what's there.
-
-## Use it
-
-Point your agent at one program:
-
-```sh
-uvx --python 3.13 --from every-app-is-open-source eaos mcp /absolute/path/to/program
-```
-
-For an MCP client config, the command is `uvx` and the arguments are:
-
-```json
-["--python", "3.13", "--from", "every-app-is-open-source", "eaos", "mcp", "/absolute/path/to/program"]
-```
-
-Or try a single tool from the terminal:
-
-```sh
-uvx --python 3.13 --from every-app-is-open-source eaos call /absolute/path/to/program open_program
-```
-
-The server only sees the one program you give it. It can't read other files on your machine.
+The original answer key stays private to prevent memory-only solving. Rebuilding a fresh target is now documented and checksum-pinned; exact historical timings/costs cannot be guaranteed on another machine or service run. See [benchmark preparation and limits](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/docs/BENCHMARK.md).
 
 ## The seven tools
 
@@ -92,44 +102,33 @@ Ghidra's analysis is slow, so each program gets its own `eaos-analysis/<sha256>/
 
 One Ghidra quirk: it won't create projects inside a folder whose name starts with a dot, like `.cache`. Keep the program you're analyzing out of those.
 
-## From a checkout
+Each session now captures a read-only copy and imports the bytes that were hashed. Changes to the original path affect a new session, not the session already open. Cached Ghidra projects must report the same executable hash. A mismatch fails without deleting old evidence; preserve and move the affected directory aside before retrying.
 
-If you'd rather run it from the repo:
+## Limitations and roadmap
+
+The saved comparison covers one modified native game, three runs per tool, one model and fixed prewarming. It does not prove better accuracy: all tools scored 100%. The 0.1.1 candidate adds integrity/validation protections; its performance has not been benchmarked.
+
+JavaScript/Electron (starting with VS Code), Android, .NET and runtime/web inspection remain future work. Each area needs its own hidden-answer-key test before an improvement claim. Initial Ghidra analysis has no overall timeout; the calculator and individual decompilations have documented limits. See the [tool contract](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/docs/TOOL-CONTRACT.md).
+
+## Development and reproduction
 
 ```sh
-./install.sh
-./eaos mcp /absolute/path/to/program
+uv build
+PYTHONPATH=src uv run --no-project --python 3.13 python -m unittest discover -s tests -v
+python3 scripts/check_distribution.py dist
 ```
 
-Same requirements. Java, Ghidra and Python all install inside the checkout.
-
-## What's next
-
-I only claim "better" where I've measured it:
-
-| Area | Status |
-|---|---|
-| Compiled programs | ✅ Beat REA and GhidraMCP on cost and speed, on modified Doom |
-| JavaScript / Electron apps | Next: VS Code, with its own hidden answer key |
-| Android apps | Planned |
-| .NET apps | Planned |
-| Websites, watching apps run | Planned |
-
-Each one gets the same treatment: a secretly modified target, a frozen answer key and a fair fight against REA, before I claim anything.
-
-## Rerun my test
+Rebuild the game target in a **fresh checkout**, with the documented SDL2 prerequisites already installed:
 
 ```sh
-uv run python -m unittest discover -s tests -v
+python3 benchmark/prepare.py
 python3 benchmark/build_doom.py
 ```
 
-`build_doom.py` makes a fresh build with new random changes, so you get your own answer key. The binary and answer key from my run stay private, since publishing them would spoil the test. In the saved reports, file paths from my machine are shortened to `<repo>`.
+These commands generate a new random target and private key, not a replay of the published scores. They never start billable model runs. See [BENCHMARK.md](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/docs/BENCHMARK.md) for what the historical comparison harness additionally needs. Previous runs, reports and protocols are retained.
 
-## Credits
+## Contributing, security and license
 
-Ghidra and PyGhidra do the heavy lifting; they're the work of their own contributors. The comparison baseline is LaurieWired's GhidraMCP. The test target is Chocolate Doom, based on id Software's Doom and released under GPLv2.
+[Contributing](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/CONTRIBUTING.md) · [Security and reporting status](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/SECURITY.md) · [Changelog](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/CHANGELOG.md). [Report a vulnerability privately](https://github.com/thomasisalwayslate/every-app-is-open-source/security/advisories/new); do not post sensitive binaries or exploit details in a public issue.
 
-## License
-
-[Apache 2.0](LICENSE). If you build on this, keep the [NOTICE](NOTICE) file. Before you point it at anything, read the [disclaimer](DISCLAIMER.md).
+Ghidra and PyGhidra are the work of their respective contributors. The comparison baseline is LaurieWired's GhidraMCP; the target is Chocolate Doom, based on id Software's Doom and released under GPLv2. This wrapper is [Apache-2.0](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/LICENSE); retain [NOTICE](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/NOTICE), upstream attribution and the [disclaimer](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/DISCLAIMER.md).

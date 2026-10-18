@@ -1,7 +1,8 @@
 [project]
 name = "every-app-is-open-source"
-version = "0.1.0"
-description = "Small, evidence-linked reverse-engineering tools for agents"
+version = "0.1.1"
+description = "Ghidra-powered MCP server for AI agents to reverse engineer native binaries with traceable evidence"
+keywords = ["ghidra", "mcp", "reverse-engineering", "binary-analysis", "static-analysis", "ai-agents", "pyghidra"]
 requires-python = ">=3.13,<3.14"
 license = "Apache-2.0"
 license-files = ["LICENSE", "NOTICE"]
@@ -24,3 +25,6 @@ eaos = ["distributions.json"]
 
 [project.urls]
 Homepage = "https://github.com/thomasisalwayslate/every-app-is-open-source"
+Documentation = "https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/docs/SETUP.md"
+Changelog = "https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/CHANGELOG.md"
+Security = "https://github.com/thomasisalwayslate/every-app-is-open-source/security/policy"

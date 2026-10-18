@@ -1,3 +1,6 @@
+include CHANGELOG.md SECURITY.md CONTRIBUTING.md
+prune docs
+include docs/SETUP.md docs/CLIENTS.md docs/TOOL-CONTRACT.md docs/BENCHMARK.md
 include README.md LICENSE NOTICE DISCLAIMER.md pyproject.toml uv.lock .python-version install.sh eaos
 include scripts/setup.py scripts/distributions.json scripts/python-downloads.json scripts/python-provenance.json
 recursive-include src/eaos *.py

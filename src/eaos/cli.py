@@ -11,21 +11,8 @@ import sys
 from .backend import Backend
 
 
-def schema(properties=None, required=None):
-    return {'type':'object','properties':properties or {},'required':required or [],'additionalProperties':False}
-
-
-S = {'type':'string'}
-B = {'type':'boolean','default':False}
-TOOLS = [
-    ('open_program','Selected target, memory map and analysis cache. full=true includes all metadata.',schema({'full':B})),
-    ('search','Substring search of strings (with xrefs) or functions. Page with next_offset; full=true for signatures.',schema({'kind':{'type':'string','enum':['strings','functions']},'pattern':S,'offset':{'type':'integer','minimum':0},'limit':{'type':'integer','minimum':1,'maximum':200},'full':B})),
-    ('inspect','Batch addresses. Default computed pseudocode. mode=calls, references, assembly or all; full=true expands. Omitted detail: read_evidence.',schema({'addresses':{'type':'array','items':S,'minItems':1,'maxItems':8},'mode':{'type':'string','enum':['decompile','assembly','references','calls','all']},'full':B},['addresses'])),
-    ('read_memory','Fact: literal bytes at a virtual address. Default hex; format=utf8 or both for text display.',schema({'address':S,'length':{'type':'integer','minimum':1,'maximum':65536},'format':{'type':'string','enum':['hex','utf8','both']}},['address'])),
-    ('calculate','Pure Python arithmetic/bytes expression. No imports, filesystem, network or program execution. Useful for numeric tables and packed constants.',schema({'expression':S},['expression'])),
-    ('decode_swift_string','Decode 64-bit little-endian Swift small String storage. Supply address or two unsigned words. Reject unsupported pointer layouts instead of inventing text.',schema({'words':{'type':'array','items':{'anyOf':[S,{'type':'integer'}]},'minItems':2,'maxItems':2},'address':S})),
-    ('read_evidence','Retrieve a content-checked evidence record by its returned id, with character paging. Never reads arbitrary paths.',schema({'id':S,'offset':{'type':'integer','minimum':0},'limit':{'type':'integer','minimum':1,'maximum':40000}},['id'])),
-]
+from .contracts import TOOLS, validate_arguments
+from . import __version__
 
 
 def protect_stdout():
@@ -38,25 +25,33 @@ def protect_stdout():
 def serve(backend):
     catalog = [{'name':name,'description':description,'inputSchema':spec} for name,description,spec in TOOLS]
     allowed = {t['name'] for t in catalog}
-    for line in sys.stdin:
+    maximum = 1024 * 1024
+    while line := sys.stdin.readline(maximum + 1):
+        if len(line) > maximum:
+            while line and not line.endswith('\n'):
+                line = sys.stdin.readline(maximum + 1)
+            print(json.dumps({'jsonrpc': '2.0', 'id': None, 'error': {
+                'code': -32600, 'message': 'Request exceeds 1 MiB character limit'}}), flush=True)
+            continue
         try:
             request = json.loads(line)
         except ValueError:
             continue
-        if 'id' not in request:
+        if not isinstance(request, dict) or 'id' not in request:
             continue
         try:
             method = request['method']
             if method == 'initialize':
                 result = {'protocolVersion':request.get('params',{}).get('protocolVersion','2024-11-05'),
-                    'capabilities':{'tools':{}},'serverInfo':{'name':'every-app-is-open-source','version':'0.1.0'}}
+                    'capabilities':{'tools':{}},'serverInfo':{'name':'every-app-is-open-source','version':__version__}}
             elif method == 'ping': result = {}
             elif method == 'tools/list': result = {'tools':catalog}
             elif method == 'tools/call':
                 name = request['params']['name']
                 if name not in allowed: raise ValueError('Unknown tool')
                 try:
-                    output = getattr(backend,name)(**request['params'].get('arguments',{}))
+                    arguments = validate_arguments(name, request['params'].get('arguments', {}))
+                    output = getattr(backend,name)(**arguments)
                     result = {'content':[{'type':'text','text':json.dumps(output,ensure_ascii=False,separators=(',',':'))}]}
                 except Exception as exc:
                     result = {'isError':True,'content':[{'type':'text','text':json.dumps({'error':str(exc),'classification':'fact','scope':'tool failure; no analysis claim'})}]}
@@ -84,11 +79,17 @@ def main():
         except (RuntimeError,OSError,subprocess.CalledProcessError) as exc:
             parser.exit(1, f'EAOS setup failed: {exc}\n')
         return
+    arguments = None
+    if args.command == 'call':
+        try:
+            arguments = validate_arguments(args.tool, json.loads(args.args))
+        except (ValueError, TypeError) as exc:
+            parser.exit(1, f'EAOS call failed: {exc}\n')
     protect_stdout()
     backend = Backend(args.binary)
     try:
         if args.command == 'mcp': serve(backend)
-        else: print(json.dumps(getattr(backend,args.tool)(**json.loads(args.args)),ensure_ascii=False,indent=2))
+        else: print(json.dumps(getattr(backend,args.tool)(**arguments),ensure_ascii=False,indent=2))
     finally:
         backend.close()
 

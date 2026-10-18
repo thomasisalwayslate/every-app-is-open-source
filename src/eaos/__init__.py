@@ -1,3 +1,2 @@
-"""Small, evidence-linked native-analysis tools for AI agents."""
-
-__version__ = "0.1.0"
+"""Compact native analysis tools for agents."""
+__version__ = "0.1.1"

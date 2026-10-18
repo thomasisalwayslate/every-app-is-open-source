@@ -13,7 +13,8 @@ ROOT = Path(__file__).resolve().parents[1]
 SOURCE_FILES = {
     'README.md', 'pyproject.toml', 'uv.lock', '.python-version', 'install.sh',
     'eaos', 'MANIFEST.in', 'PKG-INFO', 'setup.cfg',
-    'LICENSE', 'NOTICE', 'DISCLAIMER.md',
+    'LICENSE', 'NOTICE', 'DISCLAIMER.md', 'CHANGELOG.md', 'SECURITY.md', 'CONTRIBUTING.md',
+    'docs/SETUP.md', 'docs/CLIENTS.md', 'docs/TOOL-CONTRACT.md', 'docs/BENCHMARK.md',
     'scripts/setup.py', 'scripts/distributions.json',
     'scripts/python-downloads.json', 'scripts/python-provenance.json',
 }

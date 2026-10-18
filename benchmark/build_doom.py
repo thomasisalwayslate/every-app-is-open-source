@@ -14,7 +14,6 @@ import shutil
 import subprocess
 
 ROOT=Path(__file__).resolve().parents[1]
-PRIVATE=ROOT/'private/doom'
 
 
 def source_list(path, variable):
@@ -24,10 +23,23 @@ def source_list(path, variable):
     return re.findall(r'\b[\w/]+\.c\b',block.group(1))
 
 
-def main():
-    PRIVATE.mkdir(parents=True,exist_ok=False)
-    upstream=next((ROOT/'private/upstream').iterdir())
-    source=PRIVATE/'source';shutil.copytree(upstream,source)
+def main(root=ROOT):
+    private = root / 'private/doom'
+    upstream_root = root / 'private/upstream'
+    candidates = list(upstream_root.iterdir()) if upstream_root.is_dir() else []
+    if len(candidates) != 1 or not (candidates[0] / 'src/doom/p_pspr.c').is_file():
+        raise RuntimeError('Prepare public source first: python3 benchmark/prepare.py')
+    if not (root / 'private/download.json').is_file():
+        raise RuntimeError('Missing upstream receipt; run benchmark/prepare.py in a fresh checkout')
+    for path in ['/opt/homebrew/include/SDL2/SDL.h', '/opt/homebrew/include/SDL2/SDL_mixer.h', '/opt/homebrew/include/SDL2/SDL_net.h']:
+        if not Path(path).is_file():
+            raise RuntimeError('Benchmark build needs the documented SDL2 Homebrew packages; see docs/BENCHMARK.md')
+    target = root / 'benchmark/targets/chocolate-doom-secret'
+    if target.exists():
+        raise RuntimeError('Target already exists; preserve it and use a fresh benchmark directory')
+    private.mkdir(parents=True, exist_ok=False)
+    upstream = candidates[0]
+    source=private/'source';shutil.copytree(upstream,source)
     rng=secrets.SystemRandom()
     values={'gunshot_base':rng.choice([7,9,11,13]),'shotgun_pellets':rng.choice([9,11,13]),
             'imp_health':rng.randrange(83,132),'imp_speed':rng.choice([9,11,13]),
@@ -55,9 +67,9 @@ def main():
         text=text[:match.start(2)]+block+text[match.end(2):]
     info.write_text(text)
     patch=subprocess.run(['diff','-ru',str(upstream),str(source)],capture_output=True,text=True)
-    (PRIVATE/'mutations.patch').write_text(patch.stdout)
-    (PRIVATE/'values.json').write_text(json.dumps(values,indent=2))
-    build=PRIVATE/'build';build.mkdir()
+    (private/'mutations.patch').write_text(patch.stdout)
+    (private/'values.json').write_text(json.dumps(values,indent=2))
+    build=private/'build';build.mkdir()
     config='''#define PACKAGE_NAME "Chocolate Doom"
 #define PACKAGE_TARNAME "chocolate-doom"
 #define PACKAGE_VERSION "3.1.1"
@@ -88,14 +100,14 @@ def main():
             raise RuntimeError(f'Compile failed: {path.name}; see {obj.name}.error.log')
         return obj
     with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:objects=list(pool.map(compile,paths))
-    raw=PRIVATE/'chocolate-doom-unstripped'
-    link=['clang',*[str(p) for p in objects],'-L/opt/homebrew/lib','-lSDL2','-lSDL2_mixer','-lSDL2_net','-lm','-framework','Cocoa','-Wl,-map,'+str(PRIVATE/'link.map'),'-o',str(raw)]
+    raw=private/'chocolate-doom-unstripped'
+    link=['clang',*[str(p) for p in objects],'-L/opt/homebrew/lib','-lSDL2','-lSDL2_mixer','-lSDL2_net','-lm','-framework','Cocoa','-Wl,-map,'+str(private/'link.map'),'-o',str(raw)]
     process=subprocess.run(link,capture_output=True,text=True)
-    (PRIVATE/'link.log').write_text(process.stdout+process.stderr)
+    (private/'link.log').write_text(process.stdout+process.stderr)
     if process.returncode:raise RuntimeError('Link failed; see private/doom/link.log')
-    subprocess.run(['dsymutil',str(raw),'-o',str(PRIVATE/'chocolate-doom.dSYM')],check=True)
-    symbols=subprocess.check_output(['nm','-n',str(raw)],text=True);(PRIVATE/'symbols.txt').write_text(symbols)
-    targetdir=ROOT/'benchmark/targets';targetdir.mkdir(exist_ok=True)
+    subprocess.run(['dsymutil',str(raw),'-o',str(private/'chocolate-doom.dSYM')],check=True)
+    symbols=subprocess.check_output(['nm','-n',str(raw)],text=True);(private/'symbols.txt').write_text(symbols)
+    targetdir=root/'benchmark/targets';targetdir.mkdir(parents=True, exist_ok=True)
     target=targetdir/'chocolate-doom-secret'
     subprocess.run(['strip','-o',str(target),str(raw)],check=True)
     subprocess.run(['codesign','--force','--sign','-',str(target)],capture_output=True,check=True)
@@ -103,32 +115,37 @@ def main():
     for name in ['_P_GunShot','_A_FireShotgun','_A_SargAttack','_mobjinfo']:
         assert name in symbols and name not in stripped_symbols,name
     version=subprocess.run([str(target),'--version'],capture_output=True,text=True,timeout=10)
-    (PRIVATE/'version.json').write_text(json.dumps({'exit_code':version.returncode,'stdout':version.stdout,'stderr':version.stderr},indent=2))
+    (private/'version.json').write_text(json.dumps({'exit_code':version.returncode,'stdout':version.stdout,'stderr':version.stderr},indent=2))
     if version.returncode:raise RuntimeError('Stripped executable failed its version smoke test')
     fields={**values,'gunshot_min':values['gunshot_base'],'gunshot_max':values['gunshot_base']*3,
         'shotgun_min':values['shotgun_pellets']*values['gunshot_base'],
         'shotgun_max':values['shotgun_pellets']*values['gunshot_base']*3,
         'demon_min':values['demon_damage_base'],'demon_max':values['demon_damage_base']*10}
-    (PRIVATE/'answer-key.json').write_text(json.dumps(fields,indent=2))
+    (private/'answer-key.json').write_text(json.dumps(fields,indent=2))
     # Link an oracle against the exact game objects, replacing only the entry point.
-    oracle=PRIVATE/'table-oracle.c'
+    oracle=private/'table-oracle.c'
     oracle.write_text('#include <stdio.h>\n#include "info.h"\nint main(void){printf("{\\"imp_health\\":%d,\\"imp_speed\\":%d,\\"baron_health\\":%d,\\"baron_speed\\":%d,\\"rocket_speed\\":%d}\\n",mobjinfo[MT_TROOP].spawnhealth,mobjinfo[MT_TROOP].speed,mobjinfo[MT_BRUISER].spawnhealth,mobjinfo[MT_BRUISER].speed,mobjinfo[MT_ROCKET].speed/65536);return 0;}\n')
     oraclemain=build/'oracle.o';subprocess.run(flags+['-c',str(oracle),'-o',str(oraclemain)],check=True)
-    oraclebin=PRIVATE/'table-oracle'
+    oraclebin=private/'table-oracle'
     cmd=['clang',str(oraclemain),*[str(p) for p in objects if p.name!='src_i_main.c.o'],'-L/opt/homebrew/lib','-lSDL2','-lSDL2_mixer','-lSDL2_net','-lm','-framework','Cocoa','-o',str(oraclebin)]
-    process=subprocess.run(cmd,capture_output=True,text=True);(PRIVATE/'oracle-link.log').write_text(process.stdout+process.stderr)
+    process=subprocess.run(cmd,capture_output=True,text=True);(private/'oracle-link.log').write_text(process.stdout+process.stderr)
     if process.returncode:raise RuntimeError('Runtime oracle link failed')
     observed=json.loads(subprocess.check_output([str(oraclebin)],text=True))
     assert all(observed[k]==values[k] for k in observed)
-    (PRIVATE/'runtime-table-oracle.json').write_text(json.dumps(observed,indent=2))
-    manifest={'upstream':json.loads((ROOT/'private/download.json').read_text()),'version':'3.1.1',
+    (private/'runtime-table-oracle.json').write_text(json.dumps(observed,indent=2))
+    manifest={'upstream':json.loads((root/'private/download.json').read_text()),'version':'3.1.1',
         'target':str(target),'sha256':hashlib.sha256(target.read_bytes()).hexdigest(),'bytes':target.stat().st_size,
         'mutation_count':8,'source_files':len(paths),'stripped':True,'runtime_table_oracle':True,
         'compiler':subprocess.check_output(['clang','--version'],text=True).splitlines()[0],
         'note':'Full game executable; stock production strings/imports retained, internal/debug labels stripped. No WAD or gameplay test. Weapon oracle from frozen mutated source; table fields additionally executed from exact linked objects.'}
-    (PRIVATE/'build-commands.json').write_text(json.dumps(commands+[link],indent=2))
-    (ROOT/'benchmark/target-manifest.json').write_text(json.dumps(manifest,indent=2))
+    (private/'build-commands.json').write_text(json.dumps(commands+[link],indent=2))
+    (private/'target-manifest.json').write_text(json.dumps(manifest,indent=2))
     print(json.dumps(manifest,indent=2),flush=True)
 
 
-if __name__=='__main__':main()
+if __name__ == '__main__':
+    import argparse
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--root', type=Path, default=ROOT)
+    args = parser.parse_args()
+    main(args.root.resolve())

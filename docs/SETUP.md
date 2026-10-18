@@ -8,7 +8,7 @@ After 0.1.1 is published:
 uvx --python 3.13 --from every-app-is-open-source==0.1.1 eaos setup
 ```
 
-The current checkout is a candidate; this command will not resolve 0.1.1 on PyPI before publication. To test a reviewed local wheel instead, use `uvx --python 3.13 --from /absolute/path/to/every_app_is_open_source-0.1.1-py3-none-any.whl eaos setup`.
+To test a reviewed local wheel instead, use `uvx --python 3.13 --from /absolute/path/to/every_app_is_open_source-0.1.1-py3-none-any.whl eaos setup`.
 
 ## What setup runs and downloads
 

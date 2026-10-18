@@ -1,6 +1,6 @@
 # Security and support
 
-The current public release is 0.1.0. Version 0.1.1 in this checkout is an unreleased candidate; only the current public release receives fixes after publication. Apple Silicon macOS with Python 3.13 is the supported platform. Linux CI checks Python/package behavior, not native analysis support.
+Supported release: **0.1.1**. Only the latest release receives fixes. Apple Silicon macOS with Python 3.13 is the supported platform. Linux CI checks Python/package behavior, not native analysis support.
 
 EAOS is a local analysis process, not an OS sandbox. Python, Java, Ghidra and its native decompiler inherit your user's permissions. Its seven-tool interface has no arbitrary-file, shell or network tool, but that does not sandbox the implementation or protect against vulnerabilities in binary parsers. Analyze unfamiliar programs under an appropriately restricted user or isolated machine. EAOS does not execute the selected program.
 

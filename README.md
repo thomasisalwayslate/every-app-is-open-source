@@ -4,7 +4,7 @@ Give an AI agent a compiled program and inspect how it works through seven Ghidr
 
 **On one modified-Doom benchmark, EAOS 0.1.0 returned the same answers as REA, with 36% lower API-equivalent cost and 27% lower median time.** All three tools tied on correctness. This is a measured result for that test, not a general accuracy or performance guarantee.
 
-> **0.1.1 is an unreleased candidate in this checkout.** PyPI currently has 0.1.0. See [CHANGELOG.md](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/CHANGELOG.md) for the evidence-integrity and validation fixes being prepared. The historical comparison has not been rerun for 0.1.1.
+> **0.1.1 adds input-integrity and validation fixes.** See [CHANGELOG.md](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/CHANGELOG.md). The historical comparison has not been rerun for 0.1.1.
 
 The name is a provocation, not a license: reconstructing an app's logic does not give permission to copy it. Ghidra does the decompilation; this project provides the agent interface, input capture, cache and evidence handling.
 
@@ -24,8 +24,6 @@ Native analysis and managed setup: **Apple Silicon macOS**, Python 3.13, [uv](ht
 
 ## Install and connect
 
-After the 0.1.1 release is published:
-
 ```sh
 uvx --python 3.13 --from every-app-is-open-source==0.1.1 eaos setup
 ```
@@ -38,7 +36,7 @@ Point one client at one program:
 uvx --python 3.13 --from every-app-is-open-source==0.1.1 eaos mcp /absolute/path/to/program
 ```
 
-[Complete Claude Code, Codex and generic MCP setup](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/docs/CLIENTS.md). To try a local candidate before publication, replace the `--from` value with the absolute reviewed wheel path. To work from a checkout, `./install.sh` installs the existing locked dependencies and native runtimes locally, then `./eaos mcp /absolute/path/to/program` starts the server.
+[Complete Claude Code, Codex and generic MCP setup](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/docs/CLIENTS.md). To test a reviewed local wheel, replace the `--from` value with the absolute reviewed wheel path. To work from a checkout, `./install.sh` installs the existing locked dependencies and native runtimes locally, then `./eaos mcp /absolute/path/to/program` starts the server.
 
 Or call a tool directly:
 
@@ -106,7 +104,7 @@ Each session now captures a read-only copy and imports the bytes that were hashe
 
 ## Limitations and roadmap
 
-The saved comparison covers one modified native game, three runs per tool, one model and fixed prewarming. It does not prove better accuracy: all tools scored 100%. The 0.1.1 candidate adds integrity/validation protections; its performance has not been benchmarked.
+The saved comparison covers one modified native game, three runs per tool, one model and fixed prewarming. It does not prove better accuracy: all tools scored 100%. Version 0.1.1 adds integrity/validation protections; its performance has not been benchmarked.
 
 JavaScript/Electron (starting with VS Code), Android, .NET and runtime/web inspection remain future work. Each area needs its own hidden-answer-key test before an improvement claim. Initial Ghidra analysis has no overall timeout; the calculator and individual decompilations have documented limits. See the [tool contract](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/docs/TOOL-CONTRACT.md).
 

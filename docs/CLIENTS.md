@@ -1,6 +1,6 @@
 # Connect an MCP client
 
-Run setup and compile the example in [SETUP.md](SETUP.md) first. Replace `/absolute/path/to/program` with the selected binary; the server cannot switch targets during a session. These commands are for the 0.1.1 candidate **after publication**. For local candidate checks, replace the `--from` value with the absolute wheel path.
+Run setup and compile the example in [SETUP.md](SETUP.md) first. Replace `/absolute/path/to/program` with the selected binary; the server cannot switch targets during a session. These commands select version 0.1.1. For local wheel checks, replace the `--from` value with the absolute wheel path.
 
 ## Claude Code
 

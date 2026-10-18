@@ -1,0 +1,142 @@
+{
+  "frozen_at": "2026-10-18T13:29:15.806971+00:00",
+  "model": "gpt-6.1-sol",
+  "effort": "high",
+  "codex_version": "codex-cli 0.159.3",
+  "target": {
+    "target": "benchmark/targets/chocolate-doom-round2",
+    "sha256": "342a625e2cccc0272c5aa376baed426860bfe9b6f897bfd9f9f6c1574577353a",
+    "bytes": 842992,
+    "base_sha256": "a879c54660dbd5b0d7b5b520f27ecf241e1b2a18d947cd5c13d5ae1bf30b66b7",
+    "source": "Chocolate Doom 3.1.1; eight additional private control-flow/arithmetic mutations",
+    "defined_symbols": "0000000100000000 T __mh_execute_header\n",
+    "version_smoke": "Chocolate Doom 3.1.1",
+    "oracle": "private/round2/runtime-oracle.json"
+  },
+  "questions": "benchmark/questions-round2.json",
+  "questions_per_session": 6,
+  "fields_per_session": 24,
+  "repetitions_per_arm": 3,
+  "tool_call_budget": 100,
+  "timeout_seconds": 900,
+  "warmup_address": "1000007e8",
+  "schedule": [
+    {
+      "arm": "community",
+      "id": "runs/n11"
+    },
+    {
+      "arm": "ours",
+      "id": "runs/n12"
+    },
+    {
+      "arm": "rea",
+      "id": "runs/n13"
+    },
+    {
+      "arm": "rea",
+      "id": "runs/n21"
+    },
+    {
+      "arm": "community",
+      "id": "runs/n22"
+    },
+    {
+      "arm": "ours",
+      "id": "runs/n23"
+    },
+    {
+      "arm": "ours",
+      "id": "runs/n31"
+    },
+    {
+      "arm": "rea",
+      "id": "runs/n32"
+    },
+    {
+      "arm": "community",
+      "id": "runs/n33"
+    }
+  ],
+  "rea": {
+    "command": [
+      "npx",
+      "--yes",
+      "rea-agents@6.7.0",
+      "setup",
+      "--client",
+      "codex",
+      "--yes",
+      "--json"
+    ],
+    "version": "6.7.0",
+    "exit_code": 0,
+    "elapsed_s": 10.413537417014595,
+    "home": "<repo>/benchmark/installer/home"
+  },
+  "community": {
+    "repository": "https://github.com/LaurieWired/GhidraMCP",
+    "commit": "1e980252087b2479a21b9ca6d82d5829538651a7",
+    "version": "2.0.0",
+    "mode": "documented headless",
+    "source": "Reused unchanged source, built extension and installed dependencies preserved from earlier audit; no new community dependencies installed."
+  },
+  "warmup": "Fresh backend per session. Same binary bytes; analyzed readiness plus first recovered-function decompilation for all arms before agent timer. Ours/community copy the same canonical Ghidra project; REA stock imports/analyzes its own copy. Setup measured separately. Warmup answers are not given to agents.",
+  "caching": "Model/API cache not flushed or guaranteed prewarmed; fresh sessions with serial Latin-square order. Report measured cached fractions and costs; do not assume identical hit rates.",
+  "scoring": "Frozen integer key independently checked by executable gameplay probes. Missing, duplicate or null fields fail. Complete question passes only when all fields match. Report evidence/isolation separately; address occurrence alone is not semantic support.",
+  "runtime_boundaries": "Only random, BFG aim/spawn/damage reporting, radius sight/damage reporting mocked. Damage and ammo functions execute their real code. Weapon overlay downstate is S_NULL in fallback probes. No WAD/gameplay execution.",
+  "limitations": [
+    "One privately mutated ARM64 source-built Doom executable, six tasks, three trials per arm. No general superiority claim.",
+    "All three use the shared arithmetic calculator. REA full 207 stock tools and installed skill; selected-target static-native guard remains. Normal close_binary cleanup now allowed, correcting the previous harness restriction.",
+    "No agent pilots on these questions. Engineering checks use a different tiny fixture. No tool/question/grader changes after freeze.",
+    "Oracle tests controlled arithmetic bounds, not reachability of simultaneous extrema in deterministic RNG gameplay. No WAD session.",
+    "API-equivalent USD uses recorded aggregate cache categories and pinned rates; actual subscription invoice/per-request tier unknown."
+  ],
+  "hashes": {
+    "src/eaos/__init__.py": "5f899eaf783595b4c76455c95970b2575af5bfff07c9d0561441638a489e76b4",
+    "src/eaos/backend.py": "bf38f708f0c05bd931d4eab3ef19bddc4a2e16533ca7384b213721f75bdb159b",
+    "src/eaos/calculator.py": "8ef92dcf2fd33a8d1e7541e7d3867b75534ae4cd06c5619cfb631b27ac62beca",
+    "src/eaos/cli.py": "cfe2d9066c0839d237b43dba82c15e56bcd99e798b3ab09cde9ba35873beb9ff",
+    "src/eaos/evidence.py": "768dbd1effa0d3e600474a02d87872c703ede2158a33b5325522d7e194c4a121",
+    "src/eaos/swift.py": "f717d7379357eccd847ae632d109c539af5f7e69bfe845e0ed985da656a10b36",
+    "benchmark/engine.mjs": "8a8af281e56062ddb4aae8b87a1c5553e97492e337250fc625902808d927ed4f",
+    "benchmark/relay.py": "710a3b650292ecb3f56225e13650a6b8e3482d83de3182c6bb2569ea66273371",
+    "benchmark/run.py": "b5a29602303092c11a801cfc2c32328894b807992c5a4f9e0d74691803ed344f",
+    "benchmark/study2.py": "9e8c1da38487e8793aa99512e3512634b5e78a502672d85551b88a0296429d3e",
+    "benchmark/questions-round2.json": "a1991b1595ec6ebb83b30d77fcdaaa5e9d98441a19e75d772b5d13ac6c54343d",
+    "benchmark/answer-schema.json": "432b45167d0460bd22cbbd98ce2f773809df9d1cf1ac05556c70a7cb580c0010",
+    "benchmark/pricing.json": "194beffc02f009b964beda57dd8401a0a71ef61af5dc212b5603c355d73cd18f",
+    "benchmark/summarize.py": "d1173f6058e2dd588adf709d6a95f7bcc15930649007ae21c2bb1ee0d588d712",
+    "benchmark/build_round2.py": "c5ed4abf7a4be6ba1d33e90e3092313f8f393e026a8f7b0cd4a8d59dbc297c04",
+    "benchmark/oracle_round2.py": "f4e7f2c7e723d25a9ced0b44030238af8e0d7b0235ae40c3970b3f98eaffe0ea",
+    "benchmark/check_round2.py": "1ab7120bc42b729ddc2d1fc32263f3ea71f1969f59f0f6663384efb676af9dcb",
+    "private/round2/answer-key.json": "4b421da97e0155ad73d51f5a54697455220d15043650be7352f0ba284a128733",
+    "private/round2/runtime-oracle.json": "4b421da97e0155ad73d51f5a54697455220d15043650be7352f0ba284a128733",
+    "private/round2/oracle-receipt.json": "2640737d694698d66037f565b07939c142d862a9c8e1bdd9c0353a885bed7553",
+    "benchmark/targets/chocolate-doom-round2": "342a625e2cccc0272c5aa376baed426860bfe9b6f897bfd9f9f6c1574577353a",
+    "benchmark/installer/home/.agents/skills/reverse-engineer-anything/SKILL.md": "fbcd39d6abe803cf7aa49c1880815bc8e22ba2af87a23681944f687bb7629eb1",
+    "benchmark/installer/home/.agents/skills/reverse-engineer-anything/references/android-applications.md": "67a9237d76a5b736640c6404f5e1fe01d83369848142feb7e11d78f4a5e62732",
+    "benchmark/installer/home/.agents/skills/reverse-engineer-anything/references/connection-and-recovery.md": "a33760c84ae100f6ffd27d666e515956c5014ac33a6ee2414807833ae666a2b1",
+    "benchmark/installer/home/.agents/skills/reverse-engineer-anything/references/evidence-workflows.md": "2bdee98a843d018cf850c706111bb74c459ba8640da00799e9208122e4d5ab80",
+    "benchmark/installer/home/.agents/skills/reverse-engineer-anything/references/javascript-applications.md": "aaa78502a3e95268f6269e75f373908045291fedf6ddd106001555ed06bb2bf6",
+    "benchmark/installer/home/.agents/skills/reverse-engineer-anything/references/native-and-artifacts.md": "18b8828aec6476be03ca92bdb9506c47cc9ef8c1415c37d33e4af2f8c55cf8f9",
+    "benchmark/installer/home/.agents/skills/reverse-engineer-anything/references/runtime-observation.md": "fea85e2005a8fd1c86a946eeede24c20e57592a1deb36576b45216e9854803c8"
+  },
+  "earlier_reports": {
+    "reports/answer-review.json": "9feb92cab59bf052a52e8abbd876639c9ba3d339ee3ca6bc03109f3dd74dc367",
+    "reports/runs.csv": "c8fe64206694a474ae25af648beb3b7f1b2575aba933b1c473e282e8e4bdec27",
+    "reports/calculator-correction.json": "a31d76fb7d1bfd1d308c9508108ec4df55e7464561bcbb35ea4d6290e07e761b",
+    "reports/scope-guard-refusals.json": "a593e20dc164694bb9dc8b877d285b134d578c7ce065582ce0fcad328a7e561d",
+    "reports/results.json": "996e66ad6c2e701f1c19dbd16e8091b0fcba14edab92abcbb91878b8d0cbb317",
+    "reports/steps-1-to-5.json": "b7b5a125bf2db0fc74b4cb814681eab60fbfd9f65266a34c27fec81ad26e6827",
+    "reports/comparison.json": "9df94c38f5c0d13cb5263ec4efd84603fa3400b928e635ca3a45ee8e65c9dc20",
+    "reports/owner-review.md": "de3863cb703979b50d5408a0a892cf28fea0b5e290542d256f59755f0cb4a360",
+    "reports/model-audit.json": "771b26189e506f0fb9e9c215d9280b9e667b25ca809a1fa1efd12cdde586531d",
+    "reports/symbol-removal.json": "c6e396bbec35caf7127f4b1bf74ed4c473adcb87f28d6ad2cdd14d27591b848b",
+    "reports/results.md": "0d92381f8c712409a4536606f4c469f794daa29ffe94a623141783dec29ce54d",
+    "reports/results.html": "460f08bccbcc9a2938440e372ad896e626ada76f13c3175afc48dd88d1c4c15c",
+    "reports/validation.json": "cea5068cad951fd7eb3bac493480dc8d637364c7021c9354bc1a8e7185eb1769",
+    "reports/tool-profile.json": "29be5a68f9c3617c0cb889f2538bef62803bf8873641866a3dd0e112d3f0115b",
+    "reports/environment.json": "02bbdc67a0d403399c2a6a00dd4b8f319c14b699d5aa8224b416e1acae2d2334"
+  }
+}

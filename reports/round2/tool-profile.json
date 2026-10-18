@@ -1,0 +1,147 @@
+{
+  "community:get_program_info": {
+    "calls": 3,
+    "result_bytes": 4710,
+    "tool_ms": 35.63875000000007
+  },
+  "community:list_strings": {
+    "calls": 11,
+    "result_bytes": 47540,
+    "tool_ms": 348.9820410000175
+  },
+  "community:list_functions": {
+    "calls": 8,
+    "result_bytes": 95348,
+    "tool_ms": 68.70125000000553
+  },
+  "community:get_xrefs_to": {
+    "calls": 17,
+    "result_bytes": 9466,
+    "tool_ms": 76.86495799999648
+  },
+  "community:decompile_function_by_address": {
+    "calls": 58,
+    "result_bytes": 228189,
+    "tool_ms": 14085.410373999977
+  },
+  "community:read_memory": {
+    "calls": 27,
+    "result_bytes": 28199,
+    "tool_ms": 112.69704100002491
+  },
+  "community:disassemble_function": {
+    "calls": 19,
+    "result_bytes": 405609,
+    "tool_ms": 159.16458199997942
+  },
+  "community:get_function_xrefs": {
+    "calls": 3,
+    "result_bytes": 6609,
+    "tool_ms": 12.484083999996074
+  },
+  "community:calculate": {
+    "calls": 6,
+    "result_bytes": 1278,
+    "tool_ms": 228.23075000000244
+  },
+  "ours:open_program": {
+    "calls": 3,
+    "result_bytes": 9894,
+    "tool_ms": 11.501207999999679
+  },
+  "ours:search": {
+    "calls": 22,
+    "result_bytes": 63878,
+    "tool_ms": 1577.6469569999917
+  },
+  "ours:inspect": {
+    "calls": 36,
+    "result_bytes": 377961,
+    "tool_ms": 1062.8378310000062
+  },
+  "ours:read_memory": {
+    "calls": 22,
+    "result_bytes": 14039,
+    "tool_ms": 31.340124000005744
+  },
+  "ours:calculate": {
+    "calls": 5,
+    "result_bytes": 4105,
+    "tool_ms": 218.9670849999966
+  },
+  "rea:read_workflow_document": {
+    "calls": 8,
+    "result_bytes": 173350,
+    "tool_ms": 6.337375000002794
+  },
+  "rea:binary_session": {
+    "calls": 5,
+    "result_bytes": 707865,
+    "tool_ms": 181.25587500001348
+  },
+  "rea:search_strings": {
+    "calls": 17,
+    "result_bytes": 150279,
+    "tool_ms": 164.36675300000206
+  },
+  "rea:xrefs": {
+    "calls": 18,
+    "result_bytes": 124410,
+    "tool_ms": 61.4422919999779
+  },
+  "rea:list_procedures": {
+    "calls": 3,
+    "result_bytes": 2986461,
+    "tool_ms": 165.52724999998463
+  },
+  "rea:resolve_containing_procedure": {
+    "calls": 6,
+    "result_bytes": 51046,
+    "tool_ms": 42.967168000024685
+  },
+  "rea:procedure_pseudo_code": {
+    "calls": 24,
+    "result_bytes": 349336,
+    "tool_ms": 293.2338750000199
+  },
+  "rea:procedure_assembly": {
+    "calls": 7,
+    "result_bytes": 125753,
+    "tool_ms": 29.592499000020325
+  },
+  "rea:read_bytes": {
+    "calls": 24,
+    "result_bytes": 188660,
+    "tool_ms": 49.52512500000739
+  },
+  "rea:procedure_callers": {
+    "calls": 1,
+    "result_bytes": 10159,
+    "tool_ms": 2.9269169999897713
+  },
+  "rea:analyze_function": {
+    "calls": 21,
+    "result_bytes": 12275769,
+    "tool_ms": 1167.120713000004
+  },
+  "rea:close_binary": {
+    "calls": 1,
+    "result_bytes": 169,
+    "tool_ms": 491.02633300001617
+  },
+  "community:get_function_calls": {
+    "calls": 4,
+    "result_bytes": 18998,
+    "tool_ms": 21.211584000004223
+  },
+  "community:get_function_by_address": {
+    "calls": 1,
+    "result_bytes": 646,
+    "tool_ms": 3.927124999994703
+  },
+  "rea:search_procedures": {
+    "calls": 1,
+    "result_bytes": 6813,
+    "tool_ms": 3.082124999993539
+  }
+}

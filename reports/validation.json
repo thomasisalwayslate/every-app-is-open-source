@@ -1,0 +1,39 @@
+{
+  "recorded_trials": 21,
+  "tiny_trials": 3,
+  "diagnostic_real_trials": 9,
+  "primary_real_trials": 9,
+  "primary_completed": 9,
+  "unique_fresh_sessions": 21,
+  "fixed_model": "gpt-6.1-sol",
+  "fixed_effort": "high",
+  "unit_tests_passed": 9,
+  "frozen_input_hashes_match": true,
+  "all_ours_analysis_counts_one": true,
+  "isolation_violations": 0,
+  "broken_evidence_records": 0,
+  "broken_final_citations": 0,
+  "ours_evidence_records_verified": 229,
+  "ours_final_citations_verified": 95,
+  "rea_skill_and_native_guide_loaded_every_run": true,
+  "runtime_table_oracle": true,
+  "runtime_weapon_oracle": true,
+  "primary_tool_errors": 3,
+  "scope_guard_refusals": [
+    {
+      "run_id": "runs/c23",
+      "stage": "real-clean",
+      "arm": "rea",
+      "tool": "close_binary",
+      "error": "Error: This is static native analysis of one selected target. Runtime, other targets, arbitrary files and external tools are outside scope."
+    },
+    {
+      "run_id": "runs/c31",
+      "stage": "real-clean",
+      "arm": "rea",
+      "tool": "close_binary",
+      "error": "Error: This is static native analysis of one selected target. Runtime, other targets, arbitrary files and external tools are outside scope."
+    }
+  ],
+  "note": "Address appearances in output are mechanical linkage, not independent semantic proof. Exact values are scored by the frozen private key checked with executable oracles. Algebraic shotgun damage bounds use controlled rolls; actual PRNG-sequence reachability is not claimed."
+}

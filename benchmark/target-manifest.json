@@ -1,0 +1,17 @@
+{
+  "upstream": {
+    "url": "https://codeload.github.com/chocolate-doom/chocolate-doom/tar.gz/refs/tags/chocolate-doom-3.1.1",
+    "sha256": "1edcc41254bdc194beb0d33e267fae306556c4d24110a1d3d3f865717f25da23"
+  },
+  "version": "3.1.1",
+  "target": "<repo>/benchmark/targets/chocolate-doom-secret",
+  "sha256": "a879c54660dbd5b0d7b5b520f27ecf241e1b2a18d947cd5c13d5ae1bf30b66b7",
+  "bytes": 842992,
+  "mutation_count": 8,
+  "source_files": 158,
+  "stripped": true,
+  "runtime_table_oracle": true,
+  "compiler": "Apple clang version 21.0.0 (clang-2100.3.34.2)",
+  "note": "Full game executable; production strings/imports retained, internal/debug labels stripped. All eight changed constants and derived requested outcomes checked by executable oracles using the actual mutated game source/objects. Weapon oracle substitutes random/world I/O boundaries; no WAD/gameplay test.",
+  "runtime_weapon_oracle": true
+}

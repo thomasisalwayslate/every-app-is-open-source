@@ -1,0 +1,55 @@
+name: Prepare Python release
+
+# Deliberately manual. Pushing code or tags cannot start this workflow.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build and inspect candidates (no upload)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
+        with:
+          version: '0.11.8'
+          enable-cache: false
+      - name: Build wheel and source archive
+        run: uv build --python 3.13
+      - name: Inspect distribution contents
+        run: uv run --no-project --python 3.13 python scripts/check_distribution.py dist
+      - name: Check rejection of private material
+        run: uv run --no-project --python 3.13 python -m unittest discover -s tests -p test_distribution.py
+      - name: Test installed wheel without native runtimes
+        run: |
+          uv venv --python 3.13 /tmp/eaos-wheel-check
+          uv pip install --python /tmp/eaos-wheel-check/bin/python --no-deps dist/*.whl
+          /tmp/eaos-wheel-check/bin/eaos --help
+          /tmp/eaos-wheel-check/bin/eaos setup --help
+          /tmp/eaos-wheel-check/bin/python -m unittest discover -s tests -p test_contract.py
+          /tmp/eaos-wheel-check/bin/python -m unittest discover -s tests -p test_runtime.py
+
+  publish:
+    name: Publish to PyPI
+    # Enabled for a future manual release. Pushing this file never starts it.
+    # Run it by hand from the Actions tab when a release is ready.
+    if: ${{ github.event_name == 'workflow_dispatch' }}
+    needs: build
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
+        with:
+          version: '0.11.8'
+          enable-cache: false
+      - run: uv build --python 3.13
+      - run: uv run --no-project --python 3.13 python scripts/check_distribution.py dist
+      - name: Publish through PyPI OIDC
+        run: uv publish --trusted-publishing always dist/*

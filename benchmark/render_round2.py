@@ -1,0 +1,24 @@
+"""Presentation only. Frozen study2.py remains the scorer and run controller."""
+from pathlib import Path
+import html
+import json
+
+ROOT=Path(__file__).resolve().parents[1];OUT=ROOT/'reports/round2'
+def render():
+ r=json.loads((OUT/'results.json').read_text());groups={g['arm']:g for g in r['groups']}
+ if len(groups)!=3 or not r['complete']:raise RuntimeError('Wait for all nine runs')
+ a,b=groups['ours'],groups['community'];cost=100*(1-a['api_usd']/b['api_usd']);speed=100*(1-a['median_seconds']/b['median_seconds'])
+ verdict=f"Ours cost {abs(cost):.1f}% {'less' if cost>=0 else 'more'} than community GhidraMCP."
+ intro=f"{verdict} Median agent time was {abs(speed):.1f}% {'lower' if speed>=0 else 'higher'}. All tools answered {a['questions']}/{a['questions']} questions correctly." if all(g['questions_correct']==g['questions'] for g in groups.values()) else verdict+' Correctness differs; inspect the table.'
+ labels={'ours':'Every App Is Open Source','rea':'REA 6.7.0 + bundled skill','community':'Community GhidraMCP v2.0.0'}
+ def table(headers,rows):return '<table><thead><tr>'+''.join('<th>'+html.escape(x)+'</th>' for x in headers)+'</tr></thead><tbody>'+''.join('<tr>'+''.join('<td>'+html.escape(str(x))+'</td>' for x in row)+'</tr>' for row in rows)+'</tbody></table>'
+ body='<p class="eyebrow">PRIVATE · NATIVE V1 · FROZEN SECOND STUDY</p><h1>Cost, speed and correctness</h1><p class="lead">'+html.escape(intro)+'</p><p>gpt-6.1-sol · high effort · three fresh sessions per tool · six new questions · a separate stripped Doom build</p>'
+ body+=table(['Tool','Correct questions','Correct fields','Median time','Tokens, 3 runs','API USD, 3 runs'],[[labels[g['arm']],f"{g['questions_correct']}/{g['questions']}",f"{g['fields_correct']}/{g['fields']}",f"{g['median_seconds']:.1f}s",f"{g['total_tokens']:,}",f"${g['api_usd']:.4f}"] for g in r['groups']])
+ body+='<p>API-equivalent estimates include cached-input discounts; they are not a subscription invoice. Tokens include cached input. Median time excludes backend preparation, which includes analyzed readiness and the same first-function decompiler warmup for all three. Model cache locality was uncontrolled; run order was counterbalanced.</p>'
+ body+='<h2>Changes tested</h2><p>Compact evidence envelopes, hex-only memory defaults with explicit text rendering, call graphs on request, smaller search references, stable evidence identities, sorted call lists and shorter descriptions. Full metadata, assembly, call graphs, text rendering, Apple inline-string decoding and hash-checked evidence remain available.</p>'
+ body+='<h2>Individual runs</h2>'+table(['Run','Tool','Questions','Fields','Time','Input','Cached input','Output','API USD'],[[x['id'],labels[x['arm']],f"{x['questions_correct']}/6",f"{x['fields_correct']}/24",f"{x['agent_seconds']:.1f}s",f"{x['input_tokens']:,}",f"{x['cached_input_tokens']:,}",f"{x['output_tokens']:,}",f"${x['api_usd']:.4f}"] for x in r['runs']])
+ body+='<h2>Limits</h2><p>Three trials per arm on one ARM64 game estimate variability only. Full correctness leaves an accuracy ceiling: this study cannot establish better reasoning accuracy. The new build changes damage/armor ordering thresholds, ammo fallback comparisons, pickup scaling, splash attenuation and BFG loop bounds. Executable probes independently agree with all 24 frozen answer fields. This is static analysis, without a WAD/gameplay session.</p><p>No tools, questions or grader changes occurred after the protocol was frozen. Earlier results remain unchanged. No general superiority claim follows from this study.</p>'
+ body+='<p class="links"><a href="results.json">Results JSON</a> · <a href="answer-review.json">Every answer and its evidence</a> · <a href="diagnosis.json">Original cost diagnosis</a> · <a href="../../benchmark/protocol-round2.json">Frozen protocol</a> · <a href="../results.html">Earlier study</a></p>'
+ (OUT/'results.html').write_text('<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>EAOS · second Doom study</title><style>body{font:16px/1.6 system-ui;max-width:1200px;margin:50px auto;padding:0 24px;background:#f6f4ee;color:#20241e}h1{font-size:clamp(32px,5vw,52px);line-height:1.1;letter-spacing:-.04em}h2{margin-top:40px}.eyebrow{font-size:12px;letter-spacing:.12em;color:#526448}.lead{font-size:22px;max-width:880px}table{display:block;overflow:auto;border-collapse:collapse;width:100%;margin:28px 0;font-variant-numeric:tabular-nums}td,th{padding:12px;border-bottom:1px solid #cbd0c3;text-align:left;white-space:nowrap}th{font-size:12px;text-transform:uppercase;letter-spacing:.04em}a{color:#305d45}.links{padding:25px 0}</style>'+body+'</html>')
+ print(verdict,'Median time change:',round(speed,2),'percent.')
+if __name__=='__main__':render()

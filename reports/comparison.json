@@ -1,0 +1,18 @@
+{
+  "scope": "Corrected primary round only: one modified stripped ARM64 Doom, six questions, three trials per tool.",
+  "ours_vs_rea": {
+    "median_time_reduction": 0.2048803977381719,
+    "token_reduction": 0.280081475208631,
+    "standard_api_equivalent_cost_reduction": 0.1277470855946845
+  },
+  "ours_vs_community": {
+    "median_time_reduction": 0.004202381510481912,
+    "token_reduction": 0.07581968783283655,
+    "standard_api_equivalent_cost_reduction": -0.12796168114046935
+  },
+  "all_recorded_trial_tokens": 14181563,
+  "all_recorded_trial_standard_api_equivalent": 5.8427052,
+  "all_recorded_trial_cached_input_tokens": 12310912,
+  "billing_limit": "Includes retained diagnostic and tiny trials; excludes engineering, parent conversation and non-model setup. API equivalent is not a subscription invoice.",
+  "quality_limit": "If every tool scores perfectly, this is a ceiling: no evidence of superior correctness. One target and three repeats do not establish general performance."
+}

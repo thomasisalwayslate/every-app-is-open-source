@@ -1,0 +1,7 @@
+{
+  "source": "https://raw.githubusercontent.com/astral-sh/uv/536f217c2d7c5d35912383174922f86af8b5eace/crates/uv-python-managed/download-metadata.json",
+  "upstream_commit": "536f217c2d7c5d35912383174922f86af8b5eace",
+  "upstream_manifest_sha256": "8944c7c672f6b2cab3d03305a06daec71babe491cd77ec4c0bbf4a0f6d286c18",
+  "selected_key": "cpython-3.13.16-darwin-aarch64-none",
+  "note": "One unmodified official uv entry. Supplies metadata for the benchmark Python patch to uv 0.11.8; no uv upgrade or additional runtime tool."
+}

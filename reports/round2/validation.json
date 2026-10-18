@@ -1,0 +1,1266 @@
+{
+  "unique_fixed_model_sessions": 9,
+  "fixed_model": "gpt-6.1-sol",
+  "effort": "high",
+  "all_target_hashes_match": true,
+  "all_prewarmed": true,
+  "all_frozen_hashes_match": true,
+  "earlier_reports_unchanged": 15,
+  "our_evidence_records_checked": 88,
+  "our_final_citations_checked": 31,
+  "broken_evidence_records": 0,
+  "broken_final_citations": 0,
+  "rea_final_evidence_ids": 31,
+  "rea_ids_not_returned": 0,
+  "primary_function_linkage": {
+    "linked": 216,
+    "total": 216,
+    "note": "Address linkage is a secondary audit, not a substitute for the frozen exact-value scorer or a proof of every semantic step."
+  },
+  "isolation_violations": 0,
+  "tool_errors": 0,
+  "oracle_fields": 24,
+  "repo_visibility_verified": "PRIVATE",
+  "github_writes": false,
+  "unit_tests_passed": 10,
+  "real_fixture_contract_checks": 24,
+  "rea_evidence_checks": [
+    {
+      "run": "n13",
+      "id": "ev_0dc47a5e18c9222619a172207c0993e92c80416c2f31a396823074597937bd6a",
+      "returned": true
+    },
+    {
+      "run": "n13",
+      "id": "ev_6143a093bd3f62519fa093520be836a0bd051bfafeee14c2bdcb694880887cda",
+      "returned": true
+    },
+    {
+      "run": "n13",
+      "id": "ev_4889d2fb0cacb37850c1fe07c76a12f4259428b41fd5d833ef9376616f549f90",
+      "returned": true
+    },
+    {
+      "run": "n13",
+      "id": "ev_2cff5d8cdfdc1456a1d6e747c36acf34d456929ef0102f676586e1b54379e292",
+      "returned": true
+    },
+    {
+      "run": "n13",
+      "id": "ev_004022f1b03fc5dc661d90b59db631a05af20c6c09458a78850d88868df03ce3",
+      "returned": true
+    },
+    {
+      "run": "n13",
+      "id": "ev_2f3ecb2815c26f503d2a15c6f95d8214c661c8dc8c49b5e9d08ab434d7715217",
+      "returned": true
+    },
+    {
+      "run": "n13",
+      "id": "ev_26b76b39379dbbea4701f889732a2b37788820fd25803cae56c51237e4583382",
+      "returned": true
+    },
+    {
+      "run": "n13",
+      "id": "ev_65849a4b2f8e24025b7bda82b637681f3f215bae11c4b4d2e89d840de4bf8ad5",
+      "returned": true
+    },
+    {
+      "run": "n13",
+      "id": "ev_38a047b9089d2362e89b0321cc8d7da83b0925790a2d082234c5bd002ecda0d2",
+      "returned": true
+    },
+    {
+      "run": "n21",
+      "id": "ev_9cac66f85a541f9cb588d07ae50196dca37872a150ff69e433fca23c6f21c011",
+      "returned": true
+    },
+    {
+      "run": "n21",
+      "id": "ev_b0e88ec868b62e1065da087f7d81a4763e2b69ec94c33e009e2ae812311e98c1",
+      "returned": true
+    },
+    {
+      "run": "n21",
+      "id": "ev_0e08aa7a70b53742bda73df1805b23b08cbc6186bd303d9345036041603619eb",
+      "returned": true
+    },
+    {
+      "run": "n21",
+      "id": "ev_5b2573a638123171b08d440afe72a99628cfd5bcd265ad2e4d653c674d1708b0",
+      "returned": true
+    },
+    {
+      "run": "n21",
+      "id": "ev_2cff5d8cdfdc1456a1d6e747c36acf34d456929ef0102f676586e1b54379e292",
+      "returned": true
+    },
+    {
+      "run": "n21",
+      "id": "ev_b513ad96315a03c13d742f3f053c64ea066af28e71078a9e5d64fd9f45082ddd",
+      "returned": true
+    },
+    {
+      "run": "n21",
+      "id": "ev_199714ada74e832bbefa2cee9edb337732dc82193bfa7762ddf184f701b4a755",
+      "returned": true
+    },
+    {
+      "run": "n21",
+      "id": "ev_9b450a99897ff6f3f36dc9c2718f632e7f4d4c85841f6ce1fc9fe74d0cc72de8",
+      "returned": true
+    },
+    {
+      "run": "n21",
+      "id": "ev_808ae6b5e6505cf7dfcc93fc9d2894635f11b3ac7ed86e0cc1327b881381cbba",
+      "returned": true
+    },
+    {
+      "run": "n21",
+      "id": "ev_3fc1c18297fa83c3f2ff8a27c3cd1e76fc6d4e9d96b12238ec23029708559be5",
+      "returned": true
+    },
+    {
+      "run": "n21",
+      "id": "ev_26b76b39379dbbea4701f889732a2b37788820fd25803cae56c51237e4583382",
+      "returned": true
+    },
+    {
+      "run": "n32",
+      "id": "ev_9cac66f85a541f9cb588d07ae50196dca37872a150ff69e433fca23c6f21c011",
+      "returned": true
+    },
+    {
+      "run": "n32",
+      "id": "ev_b0e88ec868b62e1065da087f7d81a4763e2b69ec94c33e009e2ae812311e98c1",
+      "returned": true
+    },
+    {
+      "run": "n32",
+      "id": "ev_0e08aa7a70b53742bda73df1805b23b08cbc6186bd303d9345036041603619eb",
+      "returned": true
+    },
+    {
+      "run": "n32",
+      "id": "ev_2cff5d8cdfdc1456a1d6e747c36acf34d456929ef0102f676586e1b54379e292",
+      "returned": true
+    },
+    {
+      "run": "n32",
+      "id": "ev_93ca294c4fc912aa712b8ed7b1976a0f362b57ab828d1806c614322f0297fb13",
+      "returned": true
+    },
+    {
+      "run": "n32",
+      "id": "ev_b513ad96315a03c13d742f3f053c64ea066af28e71078a9e5d64fd9f45082ddd",
+      "returned": true
+    },
+    {
+      "run": "n32",
+      "id": "ev_199714ada74e832bbefa2cee9edb337732dc82193bfa7762ddf184f701b4a755",
+      "returned": true
+    },
+    {
+      "run": "n32",
+      "id": "ev_9b450a99897ff6f3f36dc9c2718f632e7f4d4c85841f6ce1fc9fe74d0cc72de8",
+      "returned": true
+    },
+    {
+      "run": "n32",
+      "id": "ev_808ae6b5e6505cf7dfcc93fc9d2894635f11b3ac7ed86e0cc1327b881381cbba",
+      "returned": true
+    },
+    {
+      "run": "n32",
+      "id": "ev_3fc1c18297fa83c3f2ff8a27c3cd1e76fc6d4e9d96b12238ec23029708559be5",
+      "returned": true
+    },
+    {
+      "run": "n32",
+      "id": "ev_26b76b39379dbbea4701f889732a2b37788820fd25803cae56c51237e4583382",
+      "returned": true
+    }
+  ],
+  "function_linkage_checks": [
+    {
+      "run": "n11",
+      "field": "green_health",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n11",
+      "field": "green_armor",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n11",
+      "field": "blue_health",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n11",
+      "field": "blue_armor",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n11",
+      "field": "blue_type",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n11",
+      "field": "invul_max_blocked",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n11",
+      "field": "baby_invul_health",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n11",
+      "field": "exit_health",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n11",
+      "field": "ssg_fire_two",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n11",
+      "field": "ssg_fallback_min",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n11",
+      "field": "bfg_fallback_min",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n11",
+      "field": "bfg_fire_min",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n11",
+      "field": "splash_diagonal",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n11",
+      "field": "splash_inner",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n11",
+      "field": "splash_edge",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n11",
+      "field": "splash_cyber",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n11",
+      "field": "bfg_rays",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n11",
+      "field": "bfg_min_ray",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n11",
+      "field": "bfg_max_ray",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n11",
+      "field": "bfg_total_max",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n11",
+      "field": "ammo_gain",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n11",
+      "field": "ammo_weapon",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n11",
+      "field": "ammo_cap",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n11",
+      "field": "ammo_full_result",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n12",
+      "field": "green_health",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n12",
+      "field": "green_armor",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n12",
+      "field": "blue_health",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n12",
+      "field": "blue_armor",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n12",
+      "field": "blue_type",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n12",
+      "field": "invul_max_blocked",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n12",
+      "field": "baby_invul_health",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n12",
+      "field": "exit_health",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n12",
+      "field": "ssg_fire_two",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n12",
+      "field": "ssg_fallback_min",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n12",
+      "field": "bfg_fallback_min",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n12",
+      "field": "bfg_fire_min",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n12",
+      "field": "splash_diagonal",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n12",
+      "field": "splash_inner",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n12",
+      "field": "splash_edge",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n12",
+      "field": "splash_cyber",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n12",
+      "field": "bfg_rays",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n12",
+      "field": "bfg_min_ray",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n12",
+      "field": "bfg_max_ray",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n12",
+      "field": "bfg_total_max",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n12",
+      "field": "ammo_gain",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n12",
+      "field": "ammo_weapon",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n12",
+      "field": "ammo_cap",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n12",
+      "field": "ammo_full_result",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n13",
+      "field": "green_health",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n13",
+      "field": "green_armor",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n13",
+      "field": "blue_health",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n13",
+      "field": "blue_armor",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n13",
+      "field": "blue_type",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n13",
+      "field": "invul_max_blocked",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n13",
+      "field": "baby_invul_health",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n13",
+      "field": "exit_health",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n13",
+      "field": "ssg_fire_two",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n13",
+      "field": "ssg_fallback_min",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n13",
+      "field": "bfg_fallback_min",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n13",
+      "field": "bfg_fire_min",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n13",
+      "field": "splash_diagonal",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n13",
+      "field": "splash_inner",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n13",
+      "field": "splash_edge",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n13",
+      "field": "splash_cyber",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n13",
+      "field": "bfg_rays",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n13",
+      "field": "bfg_min_ray",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n13",
+      "field": "bfg_max_ray",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n13",
+      "field": "bfg_total_max",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n13",
+      "field": "ammo_gain",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n13",
+      "field": "ammo_weapon",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n13",
+      "field": "ammo_cap",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n13",
+      "field": "ammo_full_result",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n21",
+      "field": "green_health",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n21",
+      "field": "green_armor",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n21",
+      "field": "blue_health",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n21",
+      "field": "blue_armor",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n21",
+      "field": "blue_type",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n21",
+      "field": "invul_max_blocked",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n21",
+      "field": "baby_invul_health",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n21",
+      "field": "exit_health",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n21",
+      "field": "ssg_fire_two",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n21",
+      "field": "ssg_fallback_min",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n21",
+      "field": "bfg_fallback_min",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n21",
+      "field": "bfg_fire_min",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n21",
+      "field": "splash_diagonal",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n21",
+      "field": "splash_inner",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n21",
+      "field": "splash_edge",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n21",
+      "field": "splash_cyber",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n21",
+      "field": "bfg_rays",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n21",
+      "field": "bfg_min_ray",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n21",
+      "field": "bfg_max_ray",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n21",
+      "field": "bfg_total_max",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n21",
+      "field": "ammo_gain",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n21",
+      "field": "ammo_weapon",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n21",
+      "field": "ammo_cap",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n21",
+      "field": "ammo_full_result",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n22",
+      "field": "green_health",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n22",
+      "field": "green_armor",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n22",
+      "field": "blue_health",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n22",
+      "field": "blue_armor",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n22",
+      "field": "blue_type",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n22",
+      "field": "invul_max_blocked",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n22",
+      "field": "baby_invul_health",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n22",
+      "field": "exit_health",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n22",
+      "field": "ssg_fire_two",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n22",
+      "field": "ssg_fallback_min",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n22",
+      "field": "bfg_fallback_min",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n22",
+      "field": "bfg_fire_min",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n22",
+      "field": "splash_diagonal",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n22",
+      "field": "splash_inner",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n22",
+      "field": "splash_edge",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n22",
+      "field": "splash_cyber",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n22",
+      "field": "bfg_rays",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n22",
+      "field": "bfg_min_ray",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n22",
+      "field": "bfg_max_ray",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n22",
+      "field": "bfg_total_max",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n22",
+      "field": "ammo_gain",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n22",
+      "field": "ammo_weapon",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n22",
+      "field": "ammo_cap",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n22",
+      "field": "ammo_full_result",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n23",
+      "field": "green_health",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n23",
+      "field": "green_armor",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n23",
+      "field": "blue_health",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n23",
+      "field": "blue_armor",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n23",
+      "field": "blue_type",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n23",
+      "field": "invul_max_blocked",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n23",
+      "field": "baby_invul_health",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n23",
+      "field": "exit_health",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n23",
+      "field": "ssg_fire_two",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n23",
+      "field": "ssg_fallback_min",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n23",
+      "field": "bfg_fallback_min",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n23",
+      "field": "bfg_fire_min",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n23",
+      "field": "splash_diagonal",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n23",
+      "field": "splash_inner",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n23",
+      "field": "splash_edge",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n23",
+      "field": "splash_cyber",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n23",
+      "field": "bfg_rays",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n23",
+      "field": "bfg_min_ray",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n23",
+      "field": "bfg_max_ray",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n23",
+      "field": "bfg_total_max",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n23",
+      "field": "ammo_gain",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n23",
+      "field": "ammo_weapon",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n23",
+      "field": "ammo_cap",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n23",
+      "field": "ammo_full_result",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n31",
+      "field": "green_health",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n31",
+      "field": "green_armor",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n31",
+      "field": "blue_health",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n31",
+      "field": "blue_armor",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n31",
+      "field": "blue_type",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n31",
+      "field": "invul_max_blocked",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n31",
+      "field": "baby_invul_health",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n31",
+      "field": "exit_health",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n31",
+      "field": "ssg_fire_two",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n31",
+      "field": "ssg_fallback_min",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n31",
+      "field": "bfg_fallback_min",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n31",
+      "field": "bfg_fire_min",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n31",
+      "field": "splash_diagonal",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n31",
+      "field": "splash_inner",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n31",
+      "field": "splash_edge",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n31",
+      "field": "splash_cyber",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n31",
+      "field": "bfg_rays",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n31",
+      "field": "bfg_min_ray",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n31",
+      "field": "bfg_max_ray",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n31",
+      "field": "bfg_total_max",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n31",
+      "field": "ammo_gain",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n31",
+      "field": "ammo_weapon",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n31",
+      "field": "ammo_cap",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n31",
+      "field": "ammo_full_result",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n32",
+      "field": "green_health",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n32",
+      "field": "green_armor",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n32",
+      "field": "blue_health",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n32",
+      "field": "blue_armor",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n32",
+      "field": "blue_type",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n32",
+      "field": "invul_max_blocked",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n32",
+      "field": "baby_invul_health",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n32",
+      "field": "exit_health",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n32",
+      "field": "ssg_fire_two",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n32",
+      "field": "ssg_fallback_min",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n32",
+      "field": "bfg_fallback_min",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n32",
+      "field": "bfg_fire_min",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n32",
+      "field": "splash_diagonal",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n32",
+      "field": "splash_inner",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n32",
+      "field": "splash_edge",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n32",
+      "field": "splash_cyber",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n32",
+      "field": "bfg_rays",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n32",
+      "field": "bfg_min_ray",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n32",
+      "field": "bfg_max_ray",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n32",
+      "field": "bfg_total_max",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n32",
+      "field": "ammo_gain",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n32",
+      "field": "ammo_weapon",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n32",
+      "field": "ammo_cap",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n32",
+      "field": "ammo_full_result",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n33",
+      "field": "green_health",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n33",
+      "field": "green_armor",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n33",
+      "field": "blue_health",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n33",
+      "field": "blue_armor",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n33",
+      "field": "blue_type",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n33",
+      "field": "invul_max_blocked",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n33",
+      "field": "baby_invul_health",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n33",
+      "field": "exit_health",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n33",
+      "field": "ssg_fire_two",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n33",
+      "field": "ssg_fallback_min",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n33",
+      "field": "bfg_fallback_min",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n33",
+      "field": "bfg_fire_min",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n33",
+      "field": "splash_diagonal",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n33",
+      "field": "splash_inner",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n33",
+      "field": "splash_edge",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n33",
+      "field": "splash_cyber",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n33",
+      "field": "bfg_rays",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n33",
+      "field": "bfg_min_ray",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n33",
+      "field": "bfg_max_ray",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n33",
+      "field": "bfg_total_max",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n33",
+      "field": "ammo_gain",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n33",
+      "field": "ammo_weapon",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n33",
+      "field": "ammo_cap",
+      "primary_function_linkage": true
+    },
+    {
+      "run": "n33",
+      "field": "ammo_full_result",
+      "primary_function_linkage": true
+    }
+  ]
+}

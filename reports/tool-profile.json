@@ -1,0 +1,580 @@
+{
+  "real-clean:ours": {
+    "open_program": {
+      "calls": 3,
+      "errors": 0,
+      "total_result_bytes": 11910,
+      "median_result_bytes": 3970,
+      "total_tool_seconds": 0.008684583000000202
+    },
+    "search": {
+      "calls": 32,
+      "errors": 0,
+      "total_result_bytes": 71304,
+      "median_result_bytes": 1077.0,
+      "total_tool_seconds": 2.3674908739999974
+    },
+    "inspect": {
+      "calls": 31,
+      "errors": 1,
+      "total_result_bytes": 362830,
+      "median_result_bytes": 9788,
+      "total_tool_seconds": 0.9317027100000087
+    },
+    "read_memory": {
+      "calls": 47,
+      "errors": 0,
+      "total_result_bytes": 203876,
+      "median_result_bytes": 1636,
+      "total_tool_seconds": 0.07191304300000047
+    },
+    "calculate": {
+      "calls": 3,
+      "errors": 0,
+      "total_result_bytes": 4195,
+      "median_result_bytes": 1314,
+      "total_tool_seconds": 0.16240270700001566
+    }
+  },
+  "real-clean:rea": {
+    "read_workflow_document": {
+      "calls": 7,
+      "errors": 0,
+      "total_result_bytes": 153434,
+      "median_result_bytes": 19916,
+      "total_tool_seconds": 0.009063249000002542
+    },
+    "binary_session": {
+      "calls": 3,
+      "errors": 0,
+      "total_result_bytes": 424731,
+      "median_result_bytes": 141577,
+      "total_tool_seconds": 0.0930238340000069
+    },
+    "binary_overview": {
+      "calls": 2,
+      "errors": 0,
+      "total_result_bytes": 29122,
+      "median_result_bytes": 14561.0,
+      "total_tool_seconds": 0.11631574999999429
+    },
+    "search_strings": {
+      "calls": 12,
+      "errors": 0,
+      "total_result_bytes": 109438,
+      "median_result_bytes": 7889.0,
+      "total_tool_seconds": 0.12517033499999525
+    },
+    "search_bytes": {
+      "calls": 2,
+      "errors": 0,
+      "total_result_bytes": 27574,
+      "median_result_bytes": 13787.0,
+      "total_tool_seconds": 0.06831433400000242
+    },
+    "read_bytes": {
+      "calls": 31,
+      "errors": 0,
+      "total_result_bytes": 536459,
+      "median_result_bytes": 9451,
+      "total_tool_seconds": 0.08789187499996479
+    },
+    "xrefs": {
+      "calls": 14,
+      "errors": 0,
+      "total_result_bytes": 97858,
+      "median_result_bytes": 6891.0,
+      "total_tool_seconds": 0.042542752999994264
+    },
+    "procedure_pseudo_code": {
+      "calls": 32,
+      "errors": 0,
+      "total_result_bytes": 481010,
+      "median_result_bytes": 15403.0,
+      "total_tool_seconds": 0.5045158720000181
+    },
+    "procedure_callers": {
+      "calls": 1,
+      "errors": 0,
+      "total_result_bytes": 10265,
+      "median_result_bytes": 10265,
+      "total_tool_seconds": 0.005369665999998688
+    },
+    "batch_decompile": {
+      "calls": 1,
+      "errors": 0,
+      "total_result_bytes": 46258,
+      "median_result_bytes": 46258,
+      "total_tool_seconds": 0.07635599999999977
+    },
+    "procedure_assembly": {
+      "calls": 6,
+      "errors": 0,
+      "total_result_bytes": 107686,
+      "median_result_bytes": 19447.0,
+      "total_tool_seconds": 0.023021540999994615
+    },
+    "search_procedures": {
+      "calls": 3,
+      "errors": 0,
+      "total_result_bytes": 23965,
+      "median_result_bytes": 6877,
+      "total_tool_seconds": 0.020676291999996464
+    },
+    "read_function_instructions": {
+      "calls": 4,
+      "errors": 0,
+      "total_result_bytes": 80482,
+      "median_result_bytes": 20213.0,
+      "total_tool_seconds": 0.02711695900002087
+    },
+    "list_procedures": {
+      "calls": 1,
+      "errors": 0,
+      "total_result_bytes": 995487,
+      "median_result_bytes": 995487,
+      "total_tool_seconds": 0.07956312500000058
+    },
+    "calculate": {
+      "calls": 1,
+      "errors": 0,
+      "total_result_bytes": 152,
+      "median_result_bytes": 152,
+      "total_tool_seconds": 0.03215625
+    }
+  },
+  "real-clean:community": {
+    "list_strings": {
+      "calls": 21,
+      "errors": 0,
+      "total_result_bytes": 48333,
+      "median_result_bytes": 467,
+      "total_tool_seconds": 0.5867542100000064
+    },
+    "get_program_info": {
+      "calls": 3,
+      "errors": 0,
+      "total_result_bytes": 4710,
+      "median_result_bytes": 1570,
+      "total_tool_seconds": 0.03000316600000042
+    },
+    "list_functions": {
+      "calls": 4,
+      "errors": 0,
+      "total_result_bytes": 33958,
+      "median_result_bytes": 235.0,
+      "total_tool_seconds": 0.0370476260000014
+    },
+    "get_xrefs_to": {
+      "calls": 16,
+      "errors": 0,
+      "total_result_bytes": 6857,
+      "median_result_bytes": 400.0,
+      "total_tool_seconds": 0.08071020999997927
+    },
+    "list_segments": {
+      "calls": 1,
+      "errors": 0,
+      "total_result_bytes": 6035,
+      "median_result_bytes": 6035,
+      "total_tool_seconds": 0.0034500000000007277
+    },
+    "read_memory": {
+      "calls": 36,
+      "errors": 0,
+      "total_result_bytes": 257730,
+      "median_result_bytes": 1755.0,
+      "total_tool_seconds": 0.17575612600001841
+    },
+    "decompile_function_by_address": {
+      "calls": 45,
+      "errors": 0,
+      "total_result_bytes": 179677,
+      "median_result_bytes": 4039,
+      "total_tool_seconds": 11.242011628000025
+    },
+    "get_function_calls": {
+      "calls": 8,
+      "errors": 0,
+      "total_result_bytes": 85512,
+      "median_result_bytes": 7306.0,
+      "total_tool_seconds": 0.047221374999993716
+    },
+    "disassemble_function": {
+      "calls": 10,
+      "errors": 0,
+      "total_result_bytes": 120638,
+      "median_result_bytes": 9383.0,
+      "total_tool_seconds": 0.05310983299999498
+    },
+    "calculate": {
+      "calls": 2,
+      "errors": 0,
+      "total_result_bytes": 481,
+      "median_result_bytes": 240.5,
+      "total_tool_seconds": 0.05932412499999919
+    },
+    "get_function_xrefs": {
+      "calls": 1,
+      "errors": 0,
+      "total_result_bytes": 400,
+      "median_result_bytes": 400,
+      "total_tool_seconds": 0.0033818329999921845
+    }
+  },
+  "real:ours": {
+    "open_program": {
+      "calls": 3,
+      "errors": 0,
+      "total_result_bytes": 11910,
+      "median_result_bytes": 3970,
+      "total_tool_seconds": 0.00821679199999926
+    },
+    "search": {
+      "calls": 25,
+      "errors": 0,
+      "total_result_bytes": 60346,
+      "median_result_bytes": 1077,
+      "total_tool_seconds": 1.9820760839999985
+    },
+    "inspect": {
+      "calls": 34,
+      "errors": 0,
+      "total_result_bytes": 314933,
+      "median_result_bytes": 8520.0,
+      "total_tool_seconds": 0.9360344989999758
+    },
+    "read_memory": {
+      "calls": 40,
+      "errors": 0,
+      "total_result_bytes": 200405,
+      "median_result_bytes": 1842.0,
+      "total_tool_seconds": 0.06800675500001307
+    },
+    "calculate": {
+      "calls": 3,
+      "errors": 3,
+      "total_result_bytes": 552,
+      "median_result_bytes": 184,
+      "total_tool_seconds": 0.4330917510000072
+    }
+  },
+  "real:rea": {
+    "read_workflow_document": {
+      "calls": 8,
+      "errors": 0,
+      "total_result_bytes": 173350,
+      "median_result_bytes": 19916.0,
+      "total_tool_seconds": 0.005698416000002908
+    },
+    "binary_session": {
+      "calls": 2,
+      "errors": 0,
+      "total_result_bytes": 283154,
+      "median_result_bytes": 141577.0,
+      "total_tool_seconds": 0.09227079199999935
+    },
+    "binary_overview": {
+      "calls": 2,
+      "errors": 0,
+      "total_result_bytes": 29122,
+      "median_result_bytes": 14561.0,
+      "total_tool_seconds": 0.1001048329999976
+    },
+    "search_strings": {
+      "calls": 14,
+      "errors": 0,
+      "total_result_bytes": 157546,
+      "median_result_bytes": 9613.0,
+      "total_tool_seconds": 0.13267862600001534
+    },
+    "xrefs": {
+      "calls": 22,
+      "errors": 0,
+      "total_result_bytes": 151490,
+      "median_result_bytes": 6891.0,
+      "total_tool_seconds": 0.07578137400002742
+    },
+    "analyze_function": {
+      "calls": 1,
+      "errors": 0,
+      "total_result_bytes": 1018875,
+      "median_result_bytes": 1018875,
+      "total_tool_seconds": 0.12385479099999794
+    },
+    "procedure_pseudo_code": {
+      "calls": 31,
+      "errors": 0,
+      "total_result_bytes": 466587,
+      "median_result_bytes": 15467,
+      "total_tool_seconds": 0.43252625199995237
+    },
+    "read_bytes": {
+      "calls": 33,
+      "errors": 0,
+      "total_result_bytes": 680589,
+      "median_result_bytes": 9099,
+      "total_tool_seconds": 0.11434291799998027
+    },
+    "procedure_callers": {
+      "calls": 1,
+      "errors": 0,
+      "total_result_bytes": 8405,
+      "median_result_bytes": 8405,
+      "total_tool_seconds": 0.007207542000003741
+    },
+    "list_procedures": {
+      "calls": 1,
+      "errors": 0,
+      "total_result_bytes": 995487,
+      "median_result_bytes": 995487,
+      "total_tool_seconds": 0.06989754200000607
+    },
+    "procedure_assembly": {
+      "calls": 10,
+      "errors": 0,
+      "total_result_bytes": 171858,
+      "median_result_bytes": 19447.0,
+      "total_tool_seconds": 0.03224566699999559
+    },
+    "search_bytes": {
+      "calls": 1,
+      "errors": 0,
+      "total_result_bytes": 8789,
+      "median_result_bytes": 8789,
+      "total_tool_seconds": 0.02646037499999511
+    },
+    "batch_decompile": {
+      "calls": 3,
+      "errors": 0,
+      "total_result_bytes": 79391,
+      "median_result_bytes": 28434,
+      "total_tool_seconds": 0.13240204200001607
+    },
+    "search_procedures": {
+      "calls": 2,
+      "errors": 0,
+      "total_result_bytes": 20546,
+      "median_result_bytes": 10273.0,
+      "total_tool_seconds": 0.01380162399999972
+    }
+  },
+  "real:community": {
+    "get_program_info": {
+      "calls": 3,
+      "errors": 0,
+      "total_result_bytes": 4710,
+      "median_result_bytes": 1570,
+      "total_tool_seconds": 0.03332204099999944
+    },
+    "list_strings": {
+      "calls": 15,
+      "errors": 0,
+      "total_result_bytes": 42424,
+      "median_result_bytes": 1509,
+      "total_tool_seconds": 0.462608291999979
+    },
+    "list_functions": {
+      "calls": 3,
+      "errors": 0,
+      "total_result_bytes": 705,
+      "median_result_bytes": 235,
+      "total_tool_seconds": 0.02213449899999614
+    },
+    "get_xrefs_to": {
+      "calls": 14,
+      "errors": 0,
+      "total_result_bytes": 6725,
+      "median_result_bytes": 460.0,
+      "total_tool_seconds": 0.07007025100003739
+    },
+    "decompile_function_by_address": {
+      "calls": 45,
+      "errors": 0,
+      "total_result_bytes": 179990,
+      "median_result_bytes": 4005,
+      "total_tool_seconds": 11.318647250999987
+    },
+    "read_memory": {
+      "calls": 42,
+      "errors": 0,
+      "total_result_bytes": 200408,
+      "median_result_bytes": 1465.0,
+      "total_tool_seconds": 0.2094302040000439
+    },
+    "get_function_calls": {
+      "calls": 5,
+      "errors": 0,
+      "total_result_bytes": 90522,
+      "median_result_bytes": 29490,
+      "total_tool_seconds": 0.037705708999998026
+    },
+    "disassemble_function": {
+      "calls": 9,
+      "errors": 0,
+      "total_result_bytes": 133707,
+      "median_result_bytes": 11193,
+      "total_tool_seconds": 0.06310520999999426
+    },
+    "calculate": {
+      "calls": 3,
+      "errors": 3,
+      "total_result_bytes": 273,
+      "median_result_bytes": 91,
+      "total_tool_seconds": 0.0987416670000166
+    },
+    "get_function_xrefs": {
+      "calls": 2,
+      "errors": 0,
+      "total_result_bytes": 1118,
+      "median_result_bytes": 559.0,
+      "total_tool_seconds": 0.008977124999990338
+    },
+    "get_function_by_address": {
+      "calls": 1,
+      "errors": 0,
+      "total_result_bytes": 648,
+      "median_result_bytes": 648,
+      "total_tool_seconds": 0.004867457999993349
+    }
+  },
+  "tiny:community": {
+    "get_program_info": {
+      "calls": 1,
+      "errors": 0,
+      "total_result_bytes": 1570,
+      "median_result_bytes": 1570,
+      "total_tool_seconds": 0.013707042000000001
+    },
+    "list_strings": {
+      "calls": 3,
+      "errors": 0,
+      "total_result_bytes": 17814,
+      "median_result_bytes": 3992,
+      "total_tool_seconds": 0.14093954200000008
+    },
+    "list_functions": {
+      "calls": 3,
+      "errors": 0,
+      "total_result_bytes": 5481,
+      "median_result_bytes": 2353,
+      "total_tool_seconds": 0.05253170800000225
+    },
+    "get_xrefs_to": {
+      "calls": 1,
+      "errors": 0,
+      "total_result_bytes": 807,
+      "median_result_bytes": 807,
+      "total_tool_seconds": 0.009877291000000695
+    },
+    "decompile_function_by_address": {
+      "calls": 10,
+      "errors": 0,
+      "total_result_bytes": 35293,
+      "median_result_bytes": 3672.0,
+      "total_tool_seconds": 2.4845527509999847
+    },
+    "disassemble_function": {
+      "calls": 1,
+      "errors": 0,
+      "total_result_bytes": 8089,
+      "median_result_bytes": 8089,
+      "total_tool_seconds": 0.011307084000000031
+    },
+    "read_memory": {
+      "calls": 1,
+      "errors": 0,
+      "total_result_bytes": 2301,
+      "median_result_bytes": 2301,
+      "total_tool_seconds": 0.00925683299999946
+    }
+  },
+  "tiny:ours": {
+    "open_program": {
+      "calls": 1,
+      "errors": 0,
+      "total_result_bytes": 3966,
+      "median_result_bytes": 3966,
+      "total_tool_seconds": 0.003667250000000422
+    },
+    "search": {
+      "calls": 6,
+      "errors": 0,
+      "total_result_bytes": 21029,
+      "median_result_bytes": 2022.5,
+      "total_tool_seconds": 0.5054723319999975
+    },
+    "inspect": {
+      "calls": 4,
+      "errors": 0,
+      "total_result_bytes": 53419,
+      "median_result_bytes": 15747.5,
+      "total_tool_seconds": 0.2068103330000049
+    },
+    "read_memory": {
+      "calls": 1,
+      "errors": 0,
+      "total_result_bytes": 1984,
+      "median_result_bytes": 1984,
+      "total_tool_seconds": 0.003955125000000407
+    }
+  },
+  "tiny:rea": {
+    "read_workflow_document": {
+      "calls": 3,
+      "errors": 0,
+      "total_result_bytes": 64422,
+      "median_result_bytes": 19916,
+      "total_tool_seconds": 0.002118541999998342
+    },
+    "search_strings": {
+      "calls": 2,
+      "errors": 0,
+      "total_result_bytes": 33432,
+      "median_result_bytes": 16716.0,
+      "total_tool_seconds": 15.184601541999992
+    },
+    "search_procedures": {
+      "calls": 1,
+      "errors": 0,
+      "total_result_bytes": 6857,
+      "median_result_bytes": 6857,
+      "total_tool_seconds": 0.02255120800000441
+    },
+    "xrefs": {
+      "calls": 2,
+      "errors": 0,
+      "total_result_bytes": 13782,
+      "median_result_bytes": 6891.0,
+      "total_tool_seconds": 0.009658167000001413
+    },
+    "list_procedures": {
+      "calls": 1,
+      "errors": 0,
+      "total_result_bytes": 995485,
+      "median_result_bytes": 995485,
+      "total_tool_seconds": 0.06879308400000446
+    },
+    "batch_decompile": {
+      "calls": 2,
+      "errors": 0,
+      "total_result_bytes": 50968,
+      "median_result_bytes": 25484.0,
+      "total_tool_seconds": 0.09170820899998944
+    },
+    "procedure_assembly": {
+      "calls": 1,
+      "errors": 0,
+      "total_result_bytes": 11877,
+      "median_result_bytes": 11877,
+      "total_tool_seconds": 0.010302666000003229
+    },
+    "procedure_pseudo_code": {
+      "calls": 1,
+      "errors": 0,
+      "total_result_bytes": 7557,
+      "median_result_bytes": 7557,
+      "total_tool_seconds": 0.007975166999996872
+    }
+  }
+}

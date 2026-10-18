@@ -1,0 +1,36 @@
+{
+  "versus": "community",
+  "cost_reduction_percent": 15.84633314116849,
+  "median_time_reduction_percent": 16.676845535408535,
+  "token_reduction_percent": 26.08707182471686,
+  "correctness_equal": true,
+  "cost_parts": {
+    "ours": {
+      "uncached_input_tokens": 210302,
+      "cached_input_fraction": 0.8773524715312307,
+      "uncached_input_usd": 0.420604,
+      "cached_input_usd": 0.1504384,
+      "output_usd": 0.13314
+    },
+    "rea": {
+      "uncached_input_tokens": 277551,
+      "cached_input_fraction": 0.9225399655219666,
+      "uncached_input_usd": 0.555102,
+      "cached_input_usd": 0.33056,
+      "output_usd": 0.20726
+    },
+    "community": {
+      "uncached_input_tokens": 237899,
+      "cached_input_fraction": 0.8975736609497402,
+      "uncached_input_usd": 0.475798,
+      "cached_input_usd": 0.2084736,
+      "output_usd": 0.15251
+    }
+  },
+  "savings_usd": {
+    "uncached_input_usd": 0.05519400000000002,
+    "cached_input_usd": 0.05803520000000001,
+    "output_usd": 0.01937
+  },
+  "limits": "Within this frozen cohort only. Different questions/build from earlier study: not a paired before/after estimate of the code changes. Model caching uncontrolled. Three runs per arm; no accuracy advantage established."
+}

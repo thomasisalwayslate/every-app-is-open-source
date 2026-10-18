@@ -1,0 +1,10 @@
+id,arm,status,completed,fields_correct,fields,questions_correct,questions,agent_seconds,setup_seconds,input_tokens,cached_input_tokens,output_tokens,total_tokens,api_usd,all_long_usd,tool_calls,tool_errors,isolation_violations,evidence_checked,broken_evidence,final_citations_checked,broken_citations,workflow_documents,fixed_model_effort,target_matches,analysis_counts,decompiler_prewarmed
+n11,community,finished,True,24,24,6,6,166.68114441703074,2.608575667,728304,660736,5109,733413,0.2522996,0.4790542,53,0,0,0,0,0,0,[],True,True,[],True
+n12,ours,finished,True,24,24,6,6,126.02953808300663,2.2451681249999997,647091,570752,4884,651975,0.2585932,0.49276640000000005,31,0,0,31,0,9,0,[],True,True,[1],True
+n13,rea,finished,True,24,24,6,6,163.1993028750294,19.130406417000003,1023833,942720,6645,1030478,0.322948,0.612671,50,0,0,0,0,0,0,"['SKILL.md', 'references/native-and-artifacts.md', 'references/native-and-artifacts.md']",True,True,[],True
+n21,rea,finished,True,24,24,6,6,209.3399293340044,18.920477750000003,1476509,1368064,7398,1483907,0.4276764,0.8183628000000001,41,0,0,0,0,0,0,"['SKILL.md', 'references/native-and-artifacts.md', 'references/native-and-artifacts.md']",True,True,[],True
+n22,community,finished,True,24,24,6,6,146.23398145800456,2.9125193750000005,822499,737664,5454,827953,0.29797640000000003,0.5686828,57,0,0,0,0,0,0,[],True,True,[],True
+n23,ours,finished,True,24,24,6,6,110.05878308298998,2.337156417,507736,443136,4263,511999,0.21614360000000002,0.4109722,28,0,0,28,0,10,0,[],True,True,[1],True
+n31,ours,finished,True,24,24,6,6,121.84676624997519,2.425655833,559859,490496,4167,564026,0.2294456,0.4380562,29,0,0,29,0,12,0,[],True,True,[1],True
+n32,rea,finished,True,24,24,6,6,166.66556029202184,19.101342125,1082809,994816,6683,1089492,0.3422976,0.6511802,45,0,0,0,0,0,0,"['SKILL.md', 'references/native-and-artifacts.md']",True,True,[],True
+n33,community,finished,True,24,24,6,6,136.24989529204322,2.8306664579999996,771832,686336,4688,776520,0.28650559999999997,0.5495711999999999,47,0,0,0,0,0,0,[],True,True,[],True

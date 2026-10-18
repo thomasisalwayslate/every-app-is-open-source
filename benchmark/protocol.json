@@ -1,0 +1,139 @@
+{
+  "model": "gpt-6.1-sol",
+  "effort": "high",
+  "codex_version": "codex-cli 0.159.3",
+  "tiny": {
+    "timeout_seconds": 300,
+    "schedule": [
+      {
+        "arm": "community",
+        "id": "runs/t1"
+      },
+      {
+        "arm": "ours",
+        "id": "runs/t2"
+      },
+      {
+        "arm": "rea",
+        "id": "runs/t3"
+      }
+    ]
+  },
+  "real": {
+    "timeout_seconds": 600,
+    "repetitions_per_tool": 3,
+    "questions_per_session": 6,
+    "schedule": [
+      {
+        "arm": "ours",
+        "repetition": 1,
+        "id": "runs/r11"
+      },
+      {
+        "arm": "rea",
+        "repetition": 1,
+        "id": "runs/r12"
+      },
+      {
+        "arm": "community",
+        "repetition": 1,
+        "id": "runs/r13"
+      },
+      {
+        "arm": "community",
+        "repetition": 2,
+        "id": "runs/r21"
+      },
+      {
+        "arm": "ours",
+        "repetition": 2,
+        "id": "runs/r22"
+      },
+      {
+        "arm": "rea",
+        "repetition": 2,
+        "id": "runs/r23"
+      },
+      {
+        "arm": "rea",
+        "repetition": 3,
+        "id": "runs/r31"
+      },
+      {
+        "arm": "community",
+        "repetition": 3,
+        "id": "runs/r32"
+      },
+      {
+        "arm": "ours",
+        "repetition": 3,
+        "id": "runs/r33"
+      }
+    ]
+  },
+  "input": {
+    "upstream": {
+      "url": "https://codeload.github.com/chocolate-doom/chocolate-doom/tar.gz/refs/tags/chocolate-doom-3.1.1",
+      "sha256": "1edcc41254bdc194beb0d33e267fae306556c4d24110a1d3d3f865717f25da23"
+    },
+    "version": "3.1.1",
+    "target": "<repo>/benchmark/targets/chocolate-doom-secret",
+    "sha256": "a879c54660dbd5b0d7b5b520f27ecf241e1b2a18d947cd5c13d5ae1bf30b66b7",
+    "bytes": 842992,
+    "mutation_count": 8,
+    "source_files": 158,
+    "stripped": true,
+    "runtime_table_oracle": true,
+    "compiler": "Apple clang version 21.0.0 (clang-2100.3.34.2)",
+    "note": "Full game executable; production strings/imports retained, internal/debug labels stripped. All eight changed constants and derived requested outcomes checked by executable oracles using the actual mutated game source/objects. Weapon oracle substitutes random/world I/O boundaries; no WAD/gameplay test.",
+    "runtime_weapon_oracle": true
+  },
+  "rea": {
+    "command": [
+      "npx",
+      "--yes",
+      "rea-agents@6.7.0",
+      "setup",
+      "--client",
+      "codex",
+      "--yes",
+      "--json"
+    ],
+    "version": "6.7.0",
+    "exit_code": 0,
+    "elapsed_s": 10.413537417014595,
+    "home": "<repo>/benchmark/installer/home"
+  },
+  "community": {
+    "repository": "https://github.com/LaurieWired/GhidraMCP",
+    "commit": "1e980252087b2479a21b9ca6d82d5829538651a7",
+    "version": "2.0.0",
+    "mode": "documented headless",
+    "source": "Reused unchanged source, built extension and installed dependencies preserved from earlier audit; no new community dependencies installed."
+  },
+  "correctness": "Exact integer field match to the frozen private key. Missing, duplicate and unknown fields fail. Report complete question and full-session pass separately. Evidence checked separately; no LLM judge.",
+  "isolation": "Fresh ephemeral Codex process and empty workspace per run. Shell, browser, account apps, memory, plugins, other agents and host skill discovery disabled. MCP is the only permitted analysis surface. No tool can read the source, oracle or symbols. REA receives the normally installed bundled skill and full stock catalog with static-selected-target scope guard.",
+  "timing": "Serial sessions. Separate backend setup/open/analysis from agent wall time. Ours and community start from identical copies of the canonical analyzed project. REA stock open_binary imports the same stripped bytes; its setup is measured separately. Agent time includes Codex startup, model reasoning, tool calls and final answer.",
+  "tokens": "Raw input, cached subset and output from turn.completed. Reasoning is included in output. Subscription invoice unavailable; any USD figures are labelled API-equivalent estimates. Unknown usage is never zero.",
+  "limits": [
+    "One privately mutated source-built ARM64 Doom executable; no packers, C++, GUI app, Windows or general-native superiority claim.",
+    "Three repetitions estimate variability only.",
+    "Tiny gunshot question also appears in the six-question real round; five questions are new. Do not tune implementation or questions to model answers between rounds.",
+    "Static analysis only. No WAD/gameplay benchmark.",
+    "The current npm release differs from the earlier REA 6.5.0 source audit; old bugs must not be presented as current-version failures."
+  ],
+  "hashes": {
+    "src/eaos/__init__.py": "5f899eaf783595b4c76455c95970b2575af5bfff07c9d0561441638a489e76b4",
+    "src/eaos/backend.py": "6c1e87a9e24574c0225aba77ba3ade481fde9c4dd454dc3d71f4b69b7dc2be76",
+    "src/eaos/calculator.py": "d97bca473a26073e4cebf2496953464b125bf37c604620ee3451e4511020fb8e",
+    "src/eaos/cli.py": "1de890b484b887da8df4e991ec4495e4898901cbb4d6ff73ab6d016fcc65074a",
+    "src/eaos/evidence.py": "0d66b6d0d93569698bdda443a6c3578343b3df4e1d8414f1e38a275d905d1193",
+    "src/eaos/swift.py": "f717d7379357eccd847ae632d109c539af5f7e69bfe845e0ed985da656a10b36",
+    "benchmark/engine.mjs": "46a5f8d40ac599393bbbdda63e724ef07e0a124e63497dab1484d255c6e93f8b",
+    "benchmark/relay.py": "710a3b650292ecb3f56225e13650a6b8e3482d83de3182c6bb2569ea66273371",
+    "benchmark/run.py": "94b1a3e2ee49db3899adf722d27af48d1c02781e6ef56d7e37d425d58e1867d9",
+    "benchmark/questions.json": "05b05a02ca305d0d17558fec9ebf2193dc1ea3dcfb1d3b62fa78096d4e00a754",
+    "benchmark/answer-schema.json": "432b45167d0460bd22cbbd98ce2f773809df9d1cf1ac05556c70a7cb580c0010",
+    "private/doom/answer-key.json": "c4037bb12f357a5702b694c5878705963643d9353a6e5680f8cbcf87e84bd3b3"
+  }
+}

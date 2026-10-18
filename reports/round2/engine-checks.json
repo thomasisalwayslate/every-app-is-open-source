@@ -1,0 +1,47 @@
+[
+  {
+    "arm": "ours",
+    "tools": 7,
+    "prewarmed": true,
+    "search_decompile_ok": true,
+    "isolation_probe_ok": true,
+    "setup": {
+      "ready": true,
+      "arm": "ours",
+      "target": "<repo>/benchmark/calibration/q2o/target/fixture",
+      "setup_seconds": 1.9963014579999998,
+      "stock_tool_count": 7,
+      "exposed_tool_count": 7
+    }
+  },
+  {
+    "arm": "community",
+    "tools": 29,
+    "prewarmed": true,
+    "search_decompile_ok": true,
+    "isolation_probe_ok": true,
+    "setup": {
+      "ready": true,
+      "arm": "community",
+      "target": "<repo>/benchmark/calibration/q2g/target/fixture",
+      "setup_seconds": 2.3716792499999997,
+      "stock_tool_count": 28,
+      "exposed_tool_count": 29
+    }
+  },
+  {
+    "arm": "rea",
+    "tools": 209,
+    "prewarmed": true,
+    "search_decompile_ok": true,
+    "isolation_probe_ok": true,
+    "setup": {
+      "ready": true,
+      "arm": "rea",
+      "target": "<repo>/benchmark/calibration/q2r/target/fixture",
+      "setup_seconds": 7.563341875,
+      "stock_tool_count": 207,
+      "exposed_tool_count": 209
+    }
+  }
+]

@@ -1,0 +1,14 @@
+include README.md LICENSE NOTICE DISCLAIMER.md pyproject.toml uv.lock .python-version install.sh eaos
+include scripts/setup.py scripts/distributions.json scripts/python-downloads.json scripts/python-provenance.json
+recursive-include src/eaos *.py
+include src/eaos/distributions.json
+prune private
+prune benchmark
+prune evidence
+prune reports
+prune drafts
+prune tests
+prune .tools
+prune .cache
+prune .venv
+global-exclude __pycache__ *.py[cod] .DS_Store .env .env.*

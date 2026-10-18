@@ -1,0 +1,10 @@
+{
+  "original_defined_symbols": 2842,
+  "original_internal_code_symbols": 1488,
+  "remaining_original_internal_code_symbols": 0,
+  "remaining_defined_symbols": [
+    "__mh_execute_header"
+  ],
+  "target_sha256": "a879c54660dbd5b0d7b5b520f27ecf241e1b2a18d947cd5c13d5ae1bf30b66b7",
+  "note": "The Mach-O loader header __mh_execute_header is retained; it is not an internal function label. Required imported library names remain. Debug/source sidecars are not exposed by MCP."
+}

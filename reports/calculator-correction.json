@@ -1,0 +1,44 @@
+[
+  {
+    "run": "r11",
+    "expression_sha256": "955f63fefece197f681ec60368263c464c36b432c8087519aa0f8b7c5280122a",
+    "corrected_exit_code": 0,
+    "result_chars": 171,
+    "error": null
+  },
+  {
+    "run": "r13",
+    "expression_sha256": "f621833ea9a70a993850c0aa3566c6fff1cc1fbb61e039319bca5ed8e66fb363",
+    "corrected_exit_code": 0,
+    "result_chars": 146,
+    "error": null
+  },
+  {
+    "run": "r21",
+    "expression_sha256": "57e25e8d878a491e2fcb972b381ea63030394d2b4ae03ea009b9e722d7781de6",
+    "corrected_exit_code": 0,
+    "result_chars": 418,
+    "error": null
+  },
+  {
+    "run": "r21",
+    "expression_sha256": "37d9bbaa312bd14e4e2d562a16fe16ccf5b32ce99cb7e5d1cd9ffc2450b93b5a",
+    "corrected_exit_code": 0,
+    "result_chars": 36,
+    "error": null
+  },
+  {
+    "run": "r22",
+    "expression_sha256": "84d3bc439684e96ad44916d4aef4f72058b599344186c4c85060f0448cad259a",
+    "corrected_exit_code": 0,
+    "result_chars": 320,
+    "error": null
+  },
+  {
+    "run": "r33",
+    "expression_sha256": "d604f18f810e9e4cedebe8266740d99c214d01c8f74506caaaca5ec88830cc2a",
+    "corrected_exit_code": 0,
+    "result_chars": 158,
+    "error": null
+  }
+]

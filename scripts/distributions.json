@@ -1,0 +1,10 @@
+{
+  "ghidra.zip": {
+    "sha256": "ddac49f903da9d5bac833e5cc79395098b9c33cfd3279be5f31bd00387d2d4db",
+    "bytes": 569649598
+  },
+  "jdk.tar.gz": {
+    "sha256": "3623232f33a9c3baadf304480b2535f9a3cba8a58d42ecbb438ba267315d9998",
+    "bytes": 200073404
+  }
+}

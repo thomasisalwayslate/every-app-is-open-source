@@ -1,0 +1,11 @@
+#!/bin/sh
+# Stable MCP entry point; does not sync, download or write client configuration.
+set -eu
+EAOS_ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+if [ ! -x "$EAOS_ROOT/.venv/bin/eaos" ]; then
+    echo "EAOS is not installed in $EAOS_ROOT. Run $EAOS_ROOT/install.sh first." >&2
+    exit 1
+fi
+export JAVA_HOME="$EAOS_ROOT/.tools/jdk-21.0.12.1+1/Contents/Home"
+export GHIDRA_INSTALL_DIR="$EAOS_ROOT/.tools/ghidra_12.1.4_PUBLIC"
+exec "$EAOS_ROOT/.venv/bin/eaos" "$@"

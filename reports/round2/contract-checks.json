@@ -1,0 +1,29 @@
+{
+  "passed": 24,
+  "checks": [
+    "compact metadata preserves full metadata access",
+    "default decompile omits automatic call graph, full retains it",
+    "decompilation honestly computed",
+    "deterministic identical evidence",
+    "explicit calls retained",
+    "assembly retained and labelled fact",
+    "search hit and full reference metadata",
+    "references retained",
+    "hex default with explicit text capability",
+    "resolvable evidence 3109360f2fe2670033f575a9a72806d4",
+    "paged full evidence 3109360f2fe2670033f575a9a72806d4",
+    "resolvable evidence d499ee9eea777d72b7859e0acb698ecd",
+    "paged full evidence d499ee9eea777d72b7859e0acb698ecd",
+    "resolvable evidence 4976d12b2fe9cc52478c23cdb10e7061",
+    "paged full evidence 4976d12b2fe9cc52478c23cdb10e7061",
+    "resolvable evidence 4976d12b2fe9cc52478c23cdb10e7061",
+    "paged full evidence 4976d12b2fe9cc52478c23cdb10e7061",
+    "resolvable evidence 71e4057541b393fbce127343caa9e66d",
+    "paged full evidence 71e4057541b393fbce127343caa9e66d",
+    "resolvable evidence 71e4057541b393fbce127343caa9e66d",
+    "paged full evidence 71e4057541b393fbce127343caa9e66d",
+    "calculator actual subprocess",
+    "Apple inline text and caller premise warning",
+    "seven capabilities retained"
+  ]
+}

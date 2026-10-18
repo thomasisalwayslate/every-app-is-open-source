@@ -1,0 +1,128 @@
+[
+  {
+    "run": "runs/c11",
+    "model": "gpt-6.1-sol",
+    "effort": "high",
+    "session_id": "01a14f07-7e5e-7602-9f1a-cb3a8b0f81e1"
+  },
+  {
+    "run": "runs/c12",
+    "model": "gpt-6.1-sol",
+    "effort": "high",
+    "session_id": "01a14f09-8cf6-77a3-8a4f-b7ff12662abe"
+  },
+  {
+    "run": "runs/c13",
+    "model": "gpt-6.1-sol",
+    "effort": "high",
+    "session_id": "01a14f0c-15ed-7401-89bf-2b3318e7defb"
+  },
+  {
+    "run": "runs/c21",
+    "model": "gpt-6.1-sol",
+    "effort": "high",
+    "session_id": "01a14f0d-b189-7a93-bbc2-1a7126f54158"
+  },
+  {
+    "run": "runs/c22",
+    "model": "gpt-6.1-sol",
+    "effort": "high",
+    "session_id": "01a14f0f-bdf2-7f52-8463-e0a54f12fe8a"
+  },
+  {
+    "run": "runs/c23",
+    "model": "gpt-6.1-sol",
+    "effort": "high",
+    "session_id": "01a14f12-08ff-7a53-9b7c-385ffc61590a"
+  },
+  {
+    "run": "runs/c31",
+    "model": "gpt-6.1-sol",
+    "effort": "high",
+    "session_id": "01a14f15-0680-7ca0-a1f5-48e272b09729"
+  },
+  {
+    "run": "runs/c32",
+    "model": "gpt-6.1-sol",
+    "effort": "high",
+    "session_id": "01a14f17-979d-7491-9696-9908ac9fe3ec"
+  },
+  {
+    "run": "runs/c33",
+    "model": "gpt-6.1-sol",
+    "effort": "high",
+    "session_id": "01a14f19-c709-7271-b757-b2fb35133ff8"
+  },
+  {
+    "run": "runs/r11",
+    "model": "gpt-6.1-sol",
+    "effort": "high",
+    "session_id": "01a14eed-e4dc-79b1-9c2e-42a0665bfcc1"
+  },
+  {
+    "run": "runs/r12",
+    "model": "gpt-6.1-sol",
+    "effort": "high",
+    "session_id": "01a14ef0-13d3-7161-9faf-19dcf3c9b1cd"
+  },
+  {
+    "run": "runs/r13",
+    "model": "gpt-6.1-sol",
+    "effort": "high",
+    "session_id": "01a14ef2-e8b4-7ce0-9697-42ef63fa559e"
+  },
+  {
+    "run": "runs/r21",
+    "model": "gpt-6.1-sol",
+    "effort": "high",
+    "session_id": "01a14ef5-4578-70c3-bb91-dc1a89a64f6f"
+  },
+  {
+    "run": "runs/r22",
+    "model": "gpt-6.1-sol",
+    "effort": "high",
+    "session_id": "01a14ef7-4a75-72d3-a654-23fe55883122"
+  },
+  {
+    "run": "runs/r23",
+    "model": "gpt-6.1-sol",
+    "effort": "high",
+    "session_id": "01a14ef9-8eac-7a20-a269-1ee248d0aefd"
+  },
+  {
+    "run": "runs/r31",
+    "model": "gpt-6.1-sol",
+    "effort": "high",
+    "session_id": "01a14efc-e14c-7b20-a706-0aca4606d295"
+  },
+  {
+    "run": "runs/r32",
+    "model": "gpt-6.1-sol",
+    "effort": "high",
+    "session_id": "01a14eff-c56c-7193-bd16-42b387df7620"
+  },
+  {
+    "run": "runs/r33",
+    "model": "gpt-6.1-sol",
+    "effort": "high",
+    "session_id": "01a14f01-ae80-7e70-acd5-e68fccbd4a67"
+  },
+  {
+    "run": "runs/t1",
+    "model": "gpt-6.1-sol",
+    "effort": "high",
+    "session_id": "01a14ee9-8c9f-7a80-9e6f-f72d1e1b080a"
+  },
+  {
+    "run": "runs/t2",
+    "model": "gpt-6.1-sol",
+    "effort": "high",
+    "session_id": "01a14eea-74fc-7bb0-b2bf-8fe5130a17fe"
+  },
+  {
+    "run": "runs/t3",
+    "model": "gpt-6.1-sol",
+    "effort": "high",
+    "session_id": "01a14eeb-1ea5-7560-9528-a5b999c6f7d9"
+  }
+]

@@ -1,0 +1,10 @@
+{
+  "type":"object","properties":{
+    "answers":{"type":"array","items":{"type":"object","properties":{
+      "id":{"type":"string"},"value":{"anyOf":[{"type":"integer"},{"type":"null"}]},
+      "classification":{"type":"string","enum":["fact","computed","guess"]},
+      "evidence":{"type":"string"}
+    },"required":["id","value","classification","evidence"],"additionalProperties":false}},
+    "explanation":{"type":"string"}
+  },"required":["answers","explanation"],"additionalProperties":false
+}

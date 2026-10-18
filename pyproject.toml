@@ -14,7 +14,7 @@ dependencies = ["pyghidra==3.1.0", "jpype1==1.5.2", "packaging==26.3"]
 eaos = "eaos.cli:main"
 
 [build-system]
-requires = ["setuptools>=77"]
+requires = ["setuptools>=84.0.0"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]

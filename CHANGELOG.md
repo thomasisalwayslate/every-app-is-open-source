@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.3 — Unreleased
+
+- Add `every-app-is-open-source` as an alias of `eaos` so MCP Registry clients can launch the package by its PyPI name. The short command and seven-tool interface stay the same.
+- Prepare versioned MCP Registry metadata with Python 3.13, stdio transport and a required native-program path. The listing requires this package version to be published first; preparing the metadata does not submit it.
+
 ## 0.1.2 — 2026-10-19
 
 - Keep MCP responsive during initial native analysis with one owned worker process. `open_program` reports the observed coarse stage and elapsed time until ready; premature native queries return status-bearing errors. Keep the seven tools, captured-input identity, honest labels and evidence formats.

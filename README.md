@@ -2,7 +2,7 @@
 
 Give an AI agent a compiled program and inspect how it works through seven Ghidra-powered MCP tools, with compact replies and traceable evidence.
 
-**On one modified-Doom benchmark, EAOS 0.1.0 returned the same answers as REA, with 36% lower API-equivalent cost and 27% lower median time.** All three tools tied on correctness. This is a measured result for that test, not a general accuracy or performance guarantee.
+**On one modified-Doom benchmark, EAOS 0.1.0 returned the same answers as REA 6.7.0 using roughly half the total tokens (52% fewer), with 36% lower API-equivalent cost and 27% lower median time.** All three tools tied on correctness. This is a measured result for that test, not a general accuracy or performance guarantee.
 
 > **0.1.1 adds input-integrity and validation fixes.** See [CHANGELOG.md](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/CHANGELOG.md). The historical comparison has not been rerun for 0.1.1.
 
@@ -57,6 +57,8 @@ Same model for everyone (gpt-6.1-sol, high effort), fresh sessions, six question
 | **Every App Is Open Source 0.1.0** | **18/18** | **121.8s** | **1,728,000** | **$0.70** |
 | Community GhidraMCP | 18/18 | 146.2s | 2,337,886 | $0.84 |
 | REA 6.7.0 + its bundled skill | 18/18 | 166.7s | 3,603,877 | $1.09 |
+
+Across the three runs, EAOS used **1,728,000 total tokens versus REA's 3,603,877: about 52% fewer, or roughly half**. These totals include input and output tokens, including cached input. The API-equivalent cost saving is 36% because cached input receives a billing discount.
 
 **How I kept it honest:**
 - **Doom's answers are all over the internet, so I changed them.** I built Chocolate Doom with eight gameplay rules secretly altered and stripped its function names. An agent answering from memory gets the original values, and those are now wrong.

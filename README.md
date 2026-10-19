@@ -13,7 +13,7 @@
 
 Give your AI agent a compiled program, and it works out how it's built. Ghidra does the decompiling. This is the agent's side of it: a small set of MCP tools, short answers by default, and evidence you can trace back to the binary.
 
-**On my benchmark, it gave the same answers as [REA](https://github.com/morluto/rea) with 52% fewer tokens, 36% lower cost and 27% less time.** All three tools I tested got every answer right, so this is about cost and speed, not accuracy. [How I measured it](#the-benchmark).
+**Benchmarked against [REA](https://github.com/morluto/rea) and GhidraMCP on real programs: same answers, for less cost and less time.** Every run, number and limitation is in [BENCHMARKS.md](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/BENCHMARKS.md).
 
 The name is a provocation, not a license. Seeing how an app works doesn't give you the right to copy it. Read the [disclaimer](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/DISCLAIMER.md).
 
@@ -91,35 +91,22 @@ Each session works on a read-only copy of the exact bytes it hashed, so changing
 
 One Ghidra quirk: it won't create projects inside a folder whose name starts with a dot, like `.cache`. Keep the program you're analyzing out of those.
 
-## The benchmark
+## Benchmarks
 
-Same model for every tool (gpt-6.1-sol, high effort), fresh sessions, six questions, three runs per tool. Measured on EAOS 0.1.0:
+I test it against REA and GhidraMCP whenever I point it at something new. The results live in [BENCHMARKS.md](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/BENCHMARKS.md), one row per target, each linked to every run and answer.
 
-| Tool | Correct | Median time per run | Tokens, 3 runs | API-equivalent cost, 3 runs |
-|---|---:|---:|---:|---:|
-| **Every App Is Open Source** | **18/18** | **121.8s** | **1,728,000** | **$0.70** |
-| Community GhidraMCP | 18/18 | 146.2s | 2,337,886 | $0.84 |
-| REA 6.7.0 + its bundled skill | 18/18 | 166.7s | 3,603,877 | $1.09 |
+The rules stay the same every time:
+- **Same model, fresh sessions, three runs per tool.**
+- **Questions and answer key frozen before the first run.** Where a model might know the answers by heart, I secretly change them and rebuild the program first.
+- **Same head start.** Every tool begins with the program already analyzed, outside the timer.
+- **REA runs the way people actually install it,** with its bundled skill and its full tool catalog.
+- **Everything is kept,** including rounds I lost.
 
-The token saving (52%) is bigger than the cost saving (36%) because cached input tokens are billed at a discount.
-
-**How I kept it honest:**
-- **I changed the answers.** Doom's code is all over the internet, so I built Chocolate Doom with eight gameplay rules secretly altered and its function names stripped. An agent answering from memory gets the original values, and those are wrong.
-- **I froze the questions and the answer key before the first run.** The answer key comes from running the modified game code, not from me reading it.
-- **Everyone got the same head start.** All three began with the program already analyzed, outside the timer.
-- **REA ran the way people actually install it,** with its bundled skill and its full tool catalog.
-
-**What it doesn't prove:** everyone scored 100%, so this one isn't smarter, just cheaper and faster. It's one game, three runs per tool, one model, compiled programs only. New releases aren't re-benchmarked unless the [changelog](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/CHANGELOG.md) says so.
-
-My first version actually lost to GhidraMCP on cost. I read the logs, cut the repeated metadata and the detail nobody had asked for yet, then retested on new questions and a new build. I kept the round I lost.
-
-[Full results](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/reports/round2/results.md) · [Every run](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/reports/round2/results.json) · [Answer-by-answer check](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/reports/round2/answer-review.json) · [Frozen protocol](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/benchmark/protocol-round2.json) · [The round I lost](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/reports/results.md) · [Run your own](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/docs/BENCHMARK.md)
-
-The answers are public in the answer-by-answer check. The modified game, its source and the answer-key program stay private. You can build your own secretly modified target and get your own answer key.
+Want to check my work? [Run your own](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/docs/BENCHMARK.md).
 
 ## What's next
 
-Right now it handles compiled programs. Next up are JavaScript and Electron apps (starting with VS Code), then Android, .NET, and watching apps while they run. Each one gets its own hidden-answer-key test before I claim anything.
+Right now it handles compiled programs. Next up are JavaScript and Electron apps, then Android, .NET, and watching apps while they run. Each one gets its own benchmark before I claim anything.
 
 ## Security
 
@@ -145,10 +132,10 @@ This is my project, and I build it myself. Bug reports and ideas are very welcom
 
 [Apache-2.0](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/LICENSE). If you build on it, keep the [NOTICE](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/NOTICE) file. What's changed in each release is in the [changelog](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/CHANGELOG.md).
 
-Ghidra and PyGhidra do the heavy lifting; they're the work of their own contributors. The comparison baseline is LaurieWired's GhidraMCP. The test target is Chocolate Doom, based on id Software's Doom and released under GPLv2.
+Ghidra and PyGhidra do the heavy lifting; they're the work of their own contributors. The comparison baseline is LaurieWired's GhidraMCP. The programs I benchmark on, and their licenses, are credited in [BENCHMARKS.md](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/BENCHMARKS.md).
 
 ---
 
-Made by [thomasisalwayslate](https://github.com/thomasisalwayslate). I make apps, games and small tools, usually something I want to use myself. More on [my site](https://thomasisalwayslate.github.io), including [the write-up behind this benchmark](https://thomasisalwayslate.github.io/research/same-answers-lower-cost/).
+Made by [thomasisalwayslate](https://github.com/thomasisalwayslate). I make apps, games and small tools, usually something I want to use myself. More on [my site](https://thomasisalwayslate.github.io), including [the write-ups behind the benchmarks](https://thomasisalwayslate.github.io/research).
 
 If this saved you some digging, a ⭐ helps other people find it.

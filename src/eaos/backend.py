@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import fcntl
 from bisect import bisect_left
+from collections import OrderedDict
 import hashlib
 import json
 import os
@@ -18,6 +19,7 @@ from .evidence import Evidence
 from .swift import decode_small_string
 from .runtime import configure
 from . import golang
+from . import inspection, native_inspection
 
 
 class ProgramBusyError(RuntimeError):
@@ -63,6 +65,8 @@ class Backend:
         self.go_functions = {}
         self.go_literals = []
         self.go_status = None
+        self.inspection_cache = OrderedDict()
+        self.inspection_cache_bytes = 0
 
     def _report_stage(self, stage):
         if self.on_stage is not None:
@@ -226,6 +230,8 @@ class Backend:
         if skipped:self.go_status['literal_skipped_blocks'] = skipped
 
     def close(self):
+        self.inspection_cache.clear()
+        self.inspection_cache_bytes = 0
         if self.decompiler is not None:
             self.decompiler.dispose()
             self.decompiler = None
@@ -384,14 +390,77 @@ class Backend:
         preview.pop('go_metadata',None)
         return self.result('search','computed',data,limitations, preview if not full else data)
 
+    def _function_view(self, fn):
+        key = str(fn.getEntryPoint())
+        if key in self.inspection_cache:
+            self.inspection_cache.move_to_end(key)
+            return self.inspection_cache[key][0]
+        row = native_inspection.build(self, fn)
+        if self.go_index and row.get('source') == 'go_pclntab':
+            row['go_metadata'] = {k: v for k, v in self.go_index.items() if k != 'functions'}
+        size = len(json.dumps(row, ensure_ascii=False).encode())
+        maximum = 32 * 1024 * 1024
+        while self.inspection_cache and (len(self.inspection_cache) >= 64 or
+                                         self.inspection_cache_bytes + size > maximum):
+            _, (_, removed) = self.inspection_cache.popitem(last=False)
+            self.inspection_cache_bytes -= removed
+        if size <= maximum:
+            self.inspection_cache[key] = (row, size)
+            self.inspection_cache_bytes += size
+        return row
+
+    @staticmethod
+    def _item_page(items, offset, limit):
+        page = []
+        for item in items[offset:offset + limit]:
+            item = dict(item)
+            if 'function' in item and item['function']:
+                item['function'] = inspection.compact(item['function'])
+            if 'name' in item:
+                item = inspection.compact(item)
+            page.append(item)
+        return page
+
+    def _focus_assembly(self, fn, shown, context, limit, include_mapped=False, assembly_only=False):
+        match = shown.get('focus', {}).get('match')
+        if match is None or (match['line'] is not None and not include_mapped):
+            return
+        address = self.address(match['address'])
+        if not fn.getBody().contains(address):
+            raise ValueError('Focus address is outside the selected function')
+        listing = self.program.getListing()
+        center = listing.getInstructionContaining(address)
+        if center is None:
+            shown['focus']['mapping'] = 'no pseudocode or instruction mapping'
+            return
+        first = center
+        for _ in range(min(context, (limit - 1) // 2)):
+            previous = listing.getInstructionBefore(first.getAddress())
+            if previous is None or not fn.getBody().contains(previous.getAddress()):
+                break
+            first = previous
+        instructions, current = [], first
+        for _ in range(min(limit, context * 2 + 1)):
+            if current is None or not fn.getBody().contains(current.getAddress()):
+                break
+            instructions.append({'address': str(current.getAddress()), 'text': str(current),
+                                 'bytes': bytes((int(b) & 255) for b in current.getBytes()).hex()})
+            current = listing.getInstructionAfter(current.getAddress())
+        if assembly_only:
+            shown['focus']['mapping'] = 'assembly'
+        elif match['line'] is None:
+            shown['focus']['mapping'] = 'assembly only; no matching decompiler line'
+        else:
+            shown['focus']['mapping'] = 'pseudocode and assembly'
+        shown['instructions'] = instructions
+
     @validated_tool('inspect')
-    def inspect(self, addresses, mode='decompile', full=False):
+    def inspect(self, addresses, mode='decompile', full=False, offset=0, column=0,
+                limit=40, focus=None, context=None, find=None):
+        context = (2 if find else 6) if context is None else context
         self._load()
-        if not 1 <= len(addresses) <= 8: raise ValueError('Supply 1..8 addresses')
-        if mode not in {'decompile','assembly','references','calls','all'}:
-            raise ValueError('mode must be decompile, assembly, references, calls or all')
         from ghidra.util.task import TaskMonitor
-        rows = []
+        rows, preview = [], []
         for address in addresses:
             addr = self.address(address)
             if mode == 'references':
@@ -399,42 +468,70 @@ class Backend:
                     'type':str(r.getReferenceType()),
                     'function':self.fn_info(fn) if (fn:=self.program.getFunctionManager().getFunctionContaining(r.getFromAddress())) else None}
                     for r in self.program.getReferenceManager().getReferencesTo(addr)]
-                rows.append({'address':str(addr),'references':refs});continue
-            fn = self.function(address); row = self.fn_info(fn)
-            if mode in {'decompile','all'}:
-                result = self.decompiler.decompileFunction(fn, 60, TaskMonitor.DUMMY)
-                if not result.decompileCompleted(): raise RuntimeError(str(result.getErrorMessage()))
-                code = str(result.getDecompiledFunction().getC())
-                row['pseudocode'] = code
-                path = self.directory/'evidence'/f'function-{fn.getEntryPoint()}.c'
-                path.write_text(code)
+                row = {'address':str(addr),'references':refs}
+                fn = None
+            else:
+                fn = self.function(address)
+                row = dict(self._function_view(fn)) if mode in {'decompile', 'outline', 'all'} else self.fn_info(fn)
             if mode in {'assembly','all'}:
                 row['instructions'] = [{'address':str(i.getAddress()), 'text':str(i),
                     'bytes':bytes((int(b)&255) for b in i.getBytes()).hex()}
                     for i in self.program.getListing().getInstructions(fn.getBody(),True)]
-            if mode in {'calls','all'} or (mode=='decompile' and full):
+                if mode == 'assembly' and focus:
+                    row.update(call_sites=[], string_references=[])
+                    if focus['kind'] != 'address':
+                        row.update(native_inspection.scan_references(self, fn))
+            if mode in {'calls','all'}:
                 row['callers'] = sorted([self.fn_info(f) for f in fn.getCallingFunctions(TaskMonitor.DUMMY)],key=lambda f:f['address'])
                 row['callees'] = sorted([self.fn_info(f) for f in fn.getCalledFunctions(TaskMonitor.DUMMY)],key=lambda f:f['address'])
+            if self.go_index and row.get('source') == 'go_pclntab':
+                row.setdefault('go_metadata', {k: v for k, v in self.go_index.items() if k != 'functions'})
             rows.append(row)
-        if self.go_index:
-            for row in rows:
-                if row.get('source')=='go_pclntab':
-                    row['go_metadata']={k:v for k,v in self.go_index.items() if k!='functions'}
-        preview = json.loads(json.dumps(rows))
-        for row in preview:
-            if not full:
-                row.pop('go_metadata',None);row.pop('name_address',None);row.pop('record_address',None)
-            if 'pseudocode' in row:
-                cap = 32000 if full else 5000
-                row['truncated'] = len(row['pseudocode']) > cap
-                row['pseudocode'] = row['pseudocode'][:cap]
-            for field in ['instructions','references','callers','callees']:
-                if field in row:
-                    count = 500 if full else (64 if field=='instructions' else 30)
-                    row[field+'_total'] = len(row[field]);row[field] = row[field][:count]
+            if find:
+                shown = inspection.find_view(row, find, assembly=mode == 'assembly',
+                                             offset=offset, limit=limit, context=context)
+            elif mode == 'assembly' and focus:
+                shown = inspection.compact(row)
+                shown['focus'] = inspection.focus_metadata(row, focus,
+                    inspection.instruction_lines(row['instructions']))
+                self._focus_assembly(fn, shown, context, limit, include_mapped=True, assembly_only=True)
+            elif 'pseudocode' in row:
+                if mode == 'outline' or len(addresses) > 1:
+                    shown = inspection.compact(row)
+                    shown['outline'] = inspection.outline(row, offset, limit)
+                    shown['hint'] = 'One address: find/focus next; page last. Batches return outlines even with full=true.'
+                else:
+                    shown = inspection.code_view(row, full=full, offset=offset, column=column,
+                                                 limit=limit, focus=focus, context=context)
+                    self._focus_assembly(fn, shown, context, limit, include_mapped=mode == 'all')
+            else:
+                shown = inspection.compact(row)
+            for field in ('instructions', 'references', 'callers', 'callees'):
+                if field not in row:
+                    continue
+                if find or (focus and field == 'instructions'):
+                    continue
+                count = min(limit, 8 if 'pseudocode' in row else 40)
+                shown[field] = self._item_page(row[field], offset, count)
+                shown[field+'_total'] = len(row[field])
+                shown[field+'_next_offset'] = offset + count if offset + count < len(row[field]) else None
+            maximum = inspection.REPLY_CHARS // len(addresses)
+            inspection.fit_outline(shown, maximum)
+            while len(json.dumps(shown, ensure_ascii=False, separators=(',', ':'))) > maximum:
+                fields = [f for f in ('instructions','references','callers','callees') if shown.get(f)]
+                if not fields:
+                    break
+                field = max(fields, key=lambda f: len(json.dumps(shown[f])))
+                shown[field].pop()
+                shown[field+'_next_offset'] = offset + len(shown[field])
+            row['view'] = shown
+            preview.append(shown)
         computed_names = any(row.get('source')=='go_pclntab' for row in rows)
-        return self.result('inspect','fact' if mode=='assembly' and not computed_names else 'computed',rows,
-            ['Pseudocode, recovered names, types and call graph are computed static interpretations; indirect calls may be unresolved.'] if mode!='assembly' or computed_names else [], preview)
+        return self.result('inspect','fact' if mode=='assembly' and not computed_names and not (find or focus) else 'computed',rows,
+            ['Pseudocode, recovered names, types and call graph are computed static interpretations; indirect calls may be unresolved.',
+             'Focused snippets are not control-flow slices; omitted code can affect the result. '
+             'String previews are bounded; error sites are name-based hints. Missing mappings do not prove absence.']
+            if mode!='assembly' or computed_names else [], preview)
 
     @validated_tool('read_memory')
     def read_memory(self, address, length=64, format='hex'):

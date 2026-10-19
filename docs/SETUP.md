@@ -5,10 +5,10 @@ Supported: Apple Silicon macOS, Python 3.13 (uv selects it), uv, and Apple's Com
 Install the package and prepare its native runtimes:
 
 ```sh
-uvx --python 3.13 --from every-app-is-open-source==0.1.1 eaos setup
+uvx --python 3.13 --from every-app-is-open-source==0.1.2 eaos setup
 ```
 
-To test a reviewed local wheel instead, use `uvx --python 3.13 --from /absolute/path/to/every_app_is_open_source-0.1.1-py3-none-any.whl eaos setup`.
+To test a reviewed local wheel instead, use `uvx --python 3.13 --from /absolute/path/to/every_app_is_open_source-0.1.2-py3-none-any.whl eaos setup`.
 
 ## What setup runs and downloads
 
@@ -16,7 +16,7 @@ To test a reviewed local wheel instead, use `uvx --python 3.13 --from /absolute/
 - Java: Eclipse Temurin JDK 21.0.12.1+1, **200,073,404 bytes** compressed, from Adoptium's GitHub release.
 - Ghidra: NSA Ghidra 12.1.4, **569,649,598 bytes** compressed. Setup resolves the one ZIP asset from that pinned GitHub release.
 - Java/Ghidra archives are checked against both their recorded byte size and SHA-256 before extraction. The pins are in `src/eaos/distributions.json`; source URL selection is in `src/eaos/runtime.py`.
-- Setup extracts archives and runs Apple's existing make/clang++ tools to build the ARM64 decompiler from the included Ghidra source. It also runs `file` and `java -version` to check the result.
+- Setup extracts archives and uses Apple's existing make/clang++ tools to build the ARM64 decompiler from Ghidra's included source, plus clang to build both bundled GNU C++ demanglers. It downloads no additional source or build tools. Setup checks the native architecture, Java version and C++ name decoding.
 - The two native archives total about **770 MB** before extraction; allow several GB for archives, extracted files and compilation. Duration depends on network and machine; there is no under-a-minute guarantee.
 
 For the installed package, managed files live under:
@@ -28,6 +28,7 @@ For the installed package, managed files live under:
   jdk-21.0.12.1+1/         Java
   setup.json              receipt and versions
   decompiler-build.log    compiler output
+  gnu-demangler-build.log C++ name decoder compiler output
   java-state/             Java preferences/state during analysis
 ```
 
@@ -49,12 +50,18 @@ Keep the copy and its adjacent evidence directory together. A universal Mach-O c
 
 ```sh
 lipo "$eaos_case/Example" -thin arm64 -output "$eaos_case/Example-arm64"
-uvx --python 3.13 --from every-app-is-open-source==0.1.1 eaos call "$eaos_case/Example-arm64" open_program
+uvx --python 3.13 --from every-app-is-open-source==0.1.2 eaos call "$eaos_case/Example-arm64" open_program
 ```
 
 If the executable is already a single architecture, use that copy directly. `arm64e` is a separate architecture name; this example does not establish support for it. An app's main executable may depend on frameworks and resources that are separate analysis targets.
 
-For large programs, let this terminal `open_program` call finish before connecting your MCP client to the same copied file. First analysis can exceed the client's tool timeout (180 seconds in the Codex example). The completed project is reused; interrupting an unfinished analysis may require that work to run again. Do not open the same target concurrently in the terminal and MCP server.
+Initial analysis of a large program can take many minutes. In MCP, `open_program` returns the observed stage and elapsed time while work continues; ask the agent to check once when needed. It does not report a percentage or estimate time remaining. Keep the client open. Terminal `eaos call ... open_program` is synchronous, and can also prepare a cached project before a client session. Close the terminal session before opening the same target in MCP.
+
+## Upgrade from 0.1.1
+
+Run the 0.1.2 setup command once after upgrading, using the same `EAOS_RUNTIME_DIR` as your client. It builds the newly required C++ helpers from the already installed Ghidra source, without downloading another runtime. Then restart the MCP client/server. A server that already failed initialization needs that restart.
+
+Completed analyses are reused. A C++ program analyzed before the helpers were available keeps its old recovered names. To re-analyze it with the new helpers, first close every EAOS session using that program, then **move and preserve** its specific `eaos-analysis/<sha256>/` directory elsewhere. Reopen the copied program to create a new analysis. Keep the previous project and evidence if they are still useful; an interrupted analysis starts over rather than resuming reliably.
 
 ## First result
 
@@ -68,7 +75,7 @@ __attribute__((noinline)) int quote(int n) { return n < 4 ? 19 : n * 7 + 3; }
 int main(int argc, char **argv) { puts("eaos fixture anchor"); return quote(argc); }
 C
 clang -O0 /tmp/eaos-example/example.c -o /tmp/eaos-example/example
-uvx --python 3.13 --from every-app-is-open-source==0.1.1 eaos call /tmp/eaos-example/example open_program
+uvx --python 3.13 --from every-app-is-open-source==0.1.2 eaos call /tmp/eaos-example/example open_program
 ```
 
 Expect `classification: computed`, an ARM64 language, a SHA-256, a positive function count and an evidence ID/file URI. Addresses vary by compiler; never copy an address from somebody else's run.
@@ -84,10 +91,10 @@ Expected: **45**, computed from the recovered logic. For n below 4 it returns **
 - **Run eaos setup first:** the client and setup must use the same `EAOS_RUNTIME_DIR` and user. Check the printed runtime directory.
 - **Unsupported platform:** this is an explicit supported-platform check; do not bypass it and assume native analysis was tested there.
 - **Cannot create Ghidra project:** Ghidra rejects projects under a dot-prefixed directory. Put the selected program in an ordinary writable directory such as `/tmp/eaos-example`.
-- **Already open:** close the other server/client session. Do not delete an active lock file to bypass it.
+- **Already open:** close the other server/client session. In MCP, explicitly call `open_program` again to retry after that lock error; other initialization failures still require restarting the server. Do not delete an active lock file to bypass it.
 - **Hash mismatch / affected 0.1.0 cache:** preserve and move that specific `eaos-analysis/<sha256>/` directory aside, then restart against the original binary. The new session will create a fresh cache. Do not treat existing mismatched records as verified evidence.
 - **Client cannot find uvx:** use the absolute result of `command -v uvx` in its config and restart the client.
-- **Analysis takes time:** first analysis is synchronous and has no overall timeout. Complete a terminal `open_program` call before attaching a client to a large program. A completed analysis is reused; an interrupted analysis may need to run again. Per-function decompilation is limited to 60 seconds.
+- **Analysis takes time:** initial analysis has no overall timeout. In MCP, ask for `open_program` status while it runs; terminal calls wait synchronously. A completed analysis is reused; interrupted work may need to start over. Per-function decompilation is limited to 60 seconds, and native requests after readiness still run serially.
 
 ## Uninstall
 

@@ -4,7 +4,7 @@ All argument objects are closed: unknown keys, wrong JSON types, missing require
 
 | Tool | Required input | Optional input / bounds | Result |
 |---|---|---|---|
-| open_program | none | full: boolean | Captured-input hash, architecture, memory map, function count; full metadata on request |
+| open_program | none | full: boolean | In MCP: starts/checks analysis and returns live status until ready. Once ready: captured-input hash, architecture, memory map, function count; full metadata on request |
 | search | none | kind: strings/functions; pattern: string; offset >= 0; limit 1–200; full: boolean | Matching defined strings/functions, references and next page |
 | inspect | addresses: 1–8 strings | mode: decompile/assembly/references/calls/all; full: boolean | Pseudocode, instructions, references or call graph |
 | read_memory | address: string | length: 1–65,536; format: hex/utf8/both | Observed bytes at a virtual address |
@@ -14,4 +14,14 @@ All argument objects are closed: unknown keys, wrong JSON types, missing require
 
 Pseudocode and recovered types/call graphs are **computed** static interpretations. Literal instruction bytes and memory reads are **facts**. Neither proves an interpretation of the program's intent. Indirect calls, undefined strings, unsupported Swift layouts and truncated previews can require more investigation. Full evidence retains the result behind a short preview.
 
-Read-only native analysis does not execute the selected program. It still parses untrusted input using Ghidra/Java/native code and is not an OS sandbox. See [SECURITY.md](../SECURITY.md). The initial analysis can run for a long time; the current synchronous server does not provide cancellation or an overall analysis deadline. Clients can terminate the process. Do not describe all expensive work as fully bounded.
+## MCP analysis status
+
+Version 0.1.2 keeps the same seven tools. The first binary-dependent request starts one owned analysis process, waiting up to five seconds for a quick/cached load. If initialization continues, `open_program` returns `classification: fact`, scope `analysis status; no program result`, and `data.analysis` with `state`, `stage`, `elapsed_seconds`, `stage_elapsed_seconds`, `worker_alive` and the captured input `sha256`. This live status has no evidence ID and is not a decompilation claim. Version 0.1.1 did not provide this live status.
+
+Stages are coarse boundaries EAOS observes: `starting`, `importing`, `loading_cache`, `analyzing`, `saving`, then `ready`. They are not Ghidra's internal analyzer messages. Elapsed time and a live worker do not prove forward progress, provide a percentage, or establish time remaining. A failure retains its error and does not silently restart on status checks. After a busy-program-lock error, close the other process and explicitly call `open_program` again to retry. Other initialization failures require a server restart after addressing the error.
+
+While initialization runs, `search`, `inspect`, `read_memory` and decoding at a program address return `isError: true` with `analysis` status instead of accessing partial analysis. Pure calculation, decoding supplied words, saved-evidence retrieval, `ping` and the catalog remain available. When ready, all original result/evidence formats are unchanged. Poll with `open_program` when asked or at a deliberate later checkpoint, not continuously. Native requests after readiness still execute serially.
+
+The process belongs to this MCP server. Closing the client connection ends unfinished work; there is no detached job or resume guarantee. Do not promise continued analysis after client shutdown. A completed project is reused, and interrupted work may need to run again. No input program is executed. Terminal `eaos call` remains synchronous and waits for the requested result.
+
+Read-only native analysis still parses untrusted input using Ghidra/Java/native code and is not an OS sandbox. See [SECURITY.md](../SECURITY.md). Initial analysis has no overall deadline. No per-analysis cancel tool is provided; closing the server ends its owned worker. Do not describe all expensive work as fully bounded.

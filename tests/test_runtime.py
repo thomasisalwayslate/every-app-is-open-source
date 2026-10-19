@@ -4,6 +4,7 @@ import io
 import os
 from pathlib import Path
 import tempfile
+import subprocess
 import unittest
 from unittest.mock import patch
 
@@ -51,3 +52,17 @@ class InstalledRuntime(unittest.TestCase):
                 cli.main()
             self.assertEqual(stopped.exception.code, 1)
             self.assertIn('EAOS setup failed: checksum mismatch', error.getvalue())
+
+    def test_failed_demangler_rebuild_keeps_existing_executable(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tools = Path(tmp)
+            ghidra = tools/'ghidra'
+            output = ghidra/'GPL/DemanglerGnu/os/mac_arm_64'/runtime.GNU_DEMANGLERS[0]
+            output.parent.mkdir(parents=True)
+            output.write_bytes(b'previous working helper')
+            with patch.object(runtime.subprocess, 'run',
+                              side_effect=subprocess.CalledProcessError(1, 'clang')):
+                with self.assertRaises(subprocess.CalledProcessError):
+                    runtime.build_demanglers(ghidra, tools, rebuild=True)
+            self.assertEqual(output.read_bytes(), b'previous working helper')
+            self.assertFalse(output.with_name('.eaos-'+output.name).exists())

@@ -18,6 +18,10 @@ from .swift import decode_small_string
 from .runtime import configure
 
 
+class ProgramBusyError(RuntimeError):
+    """Another EAOS process currently owns this program's analysis lock."""
+
+
 class Backend:
     def __init__(self, target: str):
         self.target = Path(target).expanduser().resolve(strict=True)
@@ -52,6 +56,11 @@ class Backend:
         self.evidence = Evidence(self.directory / 'evidence', self.digest)
         self.program = self.project = self.consumer = self.decompiler = None
         self.lock = None
+        self.on_stage = None
+
+    def _report_stage(self, stage):
+        if self.on_stage is not None:
+            self.on_stage(stage)
 
     def _load(self):
         if self.program is not None:
@@ -62,7 +71,7 @@ class Backend:
         except BlockingIOError:
             self.lock.close()
             self.lock = None
-            raise RuntimeError("Program is already open in another EAOS process; close it before retrying")
+            raise ProgramBusyError("Program is already open in another EAOS process; close it before retrying")
         try:
             self._load_project()
         except BaseException:
@@ -70,6 +79,7 @@ class Backend:
             raise
 
     def _load_project(self):
+        self._report_stage('starting')
         tools, ghidra, jdk = configure()
         from pyghidra.launcher import HeadlessPyGhidraLauncher
         import pyghidra
@@ -86,6 +96,7 @@ class Backend:
         self.project = pyghidra.open_project(project_dir, 'program', create=True)
         started = time.monotonic()
         imported = self.project.getProjectData().getFile('/'+self.target.name) is None
+        self._report_stage('importing' if imported else 'loading_cache')
         if imported:
             results = pyghidra.program_loader().project(self.project).source(str(self.snapshot)).name(self.target.name).load()
             try:
@@ -102,7 +113,9 @@ class Backend:
             )
         analyzed = False
         if imported or not GhidraProgramUtilities.isAnalyzed(self.program):
+            self._report_stage('analyzing')
             log = pyghidra.analyze(self.program)
+            self._report_stage('saving')
             (self.directory / 'analysis.log').write_text(str(log))
             self.program.save('EAOS initial analysis', monitor)
             analyzed = True

@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 import select
 import subprocess
+import time
 from urllib.parse import unquote, urlparse
 
 
@@ -36,10 +37,17 @@ def check(command, target, report):
             return result
         try:
             initialized = request('initialize', {'protocolVersion': '2025-06-18', 'capabilities': {}, 'clientInfo': {'name': 'eaos-wheel-smoke', 'version': '1'}})
-            assert initialized['serverInfo']['version'] == '0.1.1'
+            assert initialized['serverInfo']['version'] == '0.1.2'
             catalog = request('tools/list')['tools']
             assert len(catalog) == 7
             opened = tool('open_program')
+            deadline = time.monotonic() + 180
+            while 'analysis' in opened['data']:
+                assert opened['data']['analysis']['state'] == 'running'
+                if time.monotonic() > deadline:
+                    raise RuntimeError('Example analysis did not finish within the smoke-test budget')
+                time.sleep(1)
+                opened = tool('open_program')
             assert opened['data']['sha256'] == hashlib.sha256(target.read_bytes()).hexdigest()
             found = tool('search', {'kind': 'functions', 'pattern': 'quote'})
             assert found['data']['items']

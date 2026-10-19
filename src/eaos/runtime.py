@@ -20,6 +20,7 @@ BUILD_ARGS = ['make','-B','-o','xml.cc','-o','grammar.cc','-o','pcodeparse.cc',
     '-o','slghparse.cc','-o','slghscan.cc','-j4','ghidra_opt',
     'CXX=clang++ -std=c++11','ARCH_TYPE=-arch arm64',
     'ADDITIONAL_FLAGS=-mmacosx-version-min=11.0 -w']
+GNU_DEMANGLERS = ('demangler_gnu_v2_41', 'demangler_gnu_v2_24')
 
 
 def digest(path):
@@ -109,6 +110,8 @@ def configure():
     java = tools/JDK/'Contents/Home'
     required = [java/'bin/java', ghidra/'Ghidra/application.properties',
                 ghidra/'Ghidra/Features/Decompiler/os/mac_arm_64/decompile']
+    required.extend(ghidra/'GPL/DemanglerGnu/os/mac_arm_64'/name
+                    for name in GNU_DEMANGLERS)
     if not all(path.is_file() for path in required):
         raise RuntimeError('Java/Ghidra setup is incomplete. Run eaos setup first. Runtime directory: '+str(tools))
     # Match the checkout launcher: prefer our verified managed runtimes over
@@ -116,6 +119,48 @@ def configure():
     os.environ['JAVA_HOME'] = str(java)
     os.environ['GHIDRA_INSTALL_DIR'] = str(ghidra)
     return tools, ghidra, java
+
+
+def build_demanglers(ghidra, tools, rebuild=False):
+    """Build Ghidra's bundled C++ name decoders with Apple's existing compiler."""
+    module = ghidra/'GPL/DemanglerGnu'
+    results = []
+    with (tools/'gnu-demangler-build.log').open('a') as log:
+        for name in GNU_DEMANGLERS:
+            output = module/'os/mac_arm_64'/name
+            built = rebuild or not output.is_file()
+            if built:
+                source = module/'src'/name
+                output.parent.mkdir(parents=True, exist_ok=True)
+                temporary = output.with_name('.eaos-'+name)
+                command = ['xcrun', 'clang', '-O2', '-std=gnu17', '-arch', 'arm64',
+                           '-mmacosx-version-min=11.0', '-DHAVE_STDLIB_H',
+                           '-DHAVE_STRING_H', '-I', str(source/'headers')]
+                if name.endswith('v2_24'):
+                    command.append('-DMAIN_CPLUS_DEM')
+                command.extend(str(path) for path in sorted((source/'c').glob('*.c')))
+                command.extend(['-o', str(temporary)])
+                try:
+                    subprocess.run(command, stdout=log, stderr=subprocess.STDOUT, check=True)
+                    validate_demangler(temporary)
+                    temporary.replace(output)
+                finally:
+                    temporary.unlink(missing_ok=True)
+            check = validate_demangler(output)
+            results.append({'name': name, 'path': str(output), 'built': built,
+                            'sha256': digest(output), 'architecture': check})
+    return results
+
+
+def validate_demangler(output):
+    check = subprocess.check_output(['file', str(output)], text=True).strip()
+    if 'arm64' not in check:
+        raise RuntimeError('GNU demangler is not an ARM64 executable: '+check)
+    result = subprocess.run([str(output)], input='_ZNK7QString4sizeEv\n',
+                            capture_output=True, text=True, check=True, timeout=5)
+    if result.stdout.strip() != 'QString::size() const':
+        raise RuntimeError('GNU demangler failed its C++ name check: '+str(output))
+    return check
 
 
 def install(rebuild=False, archive_cache=None):
@@ -169,6 +214,7 @@ def install_locked(tools, rebuild=False, archive_cache=None):
     check = subprocess.check_output(['file',str(output)],text=True).strip()
     if 'arm64' not in check:
         raise RuntimeError('Decompiler is not an ARM64 executable: '+check)
+    demanglers = build_demanglers(ghidra, tools, rebuild)
     java_check = subprocess.run([str(java/'bin/java'),'-version'],capture_output=True,text=True,check=True)
     if 'version "21.' not in java_check.stderr:
         raise RuntimeError('Unexpected Java version: '+java_check.stderr)
@@ -180,6 +226,7 @@ def install_locked(tools, rebuild=False, archive_cache=None):
         'python':platform.python_version(),'pyghidra':pyghidra_version,
         'python_executable':sys.executable,'package_location':str(Path(__file__).resolve().parent),
         'decompiler':check,'decompiler_sha256':digest(output),'decompiler_built':rebuilt,
+        'gnu_demanglers':demanglers,
         'verified_archives':archives,'downloaded':downloaded}
     temporary = tools/'setup.json.part'
     temporary.write_text(json.dumps(report,indent=2)+'\n')

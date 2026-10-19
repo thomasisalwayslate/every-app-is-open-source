@@ -53,7 +53,8 @@ def prepare(arm,runid,source=None,env=None):
     while not (directory/'ready.json').exists():
         if engine.poll() is not None:
             engine_log.close();raise RuntimeError(f'{arm} preparation failed: {directory}/engine-process.log')
-        if time.monotonic()-start>270:
+        # Infrastructure ceiling only; preparation stays outside agent timing.
+        if time.monotonic()-start>3600:
             os.killpg(engine.pid,signal.SIGTERM);engine.wait(timeout=10)
             engine_log.close();raise RuntimeError(f'{arm} preparation timed out')
         time.sleep(.2)

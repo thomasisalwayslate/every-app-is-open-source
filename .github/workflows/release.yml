@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       publish:
-        description: Publish the checked artifacts from a reviewed version tag
+        description: Publish from main after verifying its matching reviewed version tag
         type: boolean
         required: true
         default: false
@@ -19,22 +19,30 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
       - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
         with:
           version: '0.11.8'
           enable-cache: false
-      - name: Require a matching version tag for publication
+      - name: Require approved main and its matching version tag for publication
         if: ${{ inputs.publish }}
         env:
           REF_TYPE: ${{ github.ref_type }}
           REF_NAME: ${{ github.ref_name }}
         run: |
           python3 - <<'PYTHON'
-          import os, tomllib
+          import os, subprocess, tomllib
           from pathlib import Path
           version = tomllib.loads(Path('pyproject.toml').read_text())['project']['version']
-          if os.environ['REF_TYPE'] != 'tag' or os.environ['REF_NAME'] != 'v' + version:
-              raise SystemExit('Publish requires the reviewed v' + version + ' tag; no upload was attempted.')
+          if os.environ['REF_TYPE'] != 'branch' or os.environ['REF_NAME'] != 'main':
+              raise SystemExit('Publish requires approved main; no upload was attempted.')
+          tag = 'v' + version
+          head = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
+          tagged = subprocess.run(['git', 'rev-parse', '--verify', 'refs/tags/' + tag + '^{commit}'],
+                                  text=True, capture_output=True)
+          if tagged.returncode or tagged.stdout.strip() != head:
+              raise SystemExit('Publish requires ' + tag + ' to point to this exact main commit; no upload was attempted.')
           PYTHON
       - name: Build wheel and source archive
         run: uv build --python 3.13
@@ -42,6 +50,8 @@ jobs:
         run: uv run --no-project --python 3.13 python scripts/check_distribution.py dist
       - name: Run all portable tests
         run: PYTHONPATH=src uv run --no-project --python 3.13 python -m unittest discover -s tests -v
+      - name: Benchmark argument and path isolation regressions
+        run: node --test tests/benchmark-scope.test.mjs
       - name: Test installed wheel without native runtimes
         run: |
           uv venv --python 3.13 /tmp/eaos-wheel-check
@@ -65,7 +75,7 @@ jobs:
 
   publish:
     name: Publish to PyPI
-    # Explicit publish input is off by default; publishing also requires a matching tag.
+    # Off by default; the build verifies main and a matching immutable version tag.
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish }}
     needs: build
     runs-on: ubuntu-latest

@@ -1,12 +1,12 @@
 # Changelog
 
-## Unreleased
+## 0.1.4 — Unreleased
 
 - Extend the existing seven-tool interface with bounded Go pclntab name discovery and literal-byte string search, including stored Ghidra references at the actual match address. Keep matched slices distinct from complete strings and preserve full evidence.
 - Enrich inspected functions with recovered Go names without renaming Ghidra's project or claiming repaired Go types/ABI. Cache the metadata index beside the program and reuse existing Ghidra analysis; report indexing status and unsupported layouts.
 - Add malformed-metadata, cache-integrity and string-boundary regressions, a small stripped Go fixture and an opt-in native MCP walkthrough. Native checks cover Go 1.25.14 and 1.27.1 on Apple Silicon; missing stored references remain explicitly reported. This work has no new model benchmark or performance claim.
 
-## 0.1.3 — Unreleased
+## 0.1.3 — 2026-10-19
 
 - Add `every-app-is-open-source` as an alias of `eaos` so MCP Registry clients can launch the package by its PyPI name. The short command and seven-tool interface stay the same.
 - Prepare versioned MCP Registry metadata with Python 3.13, stdio transport and a required native-program path. The listing requires this package version to be published first; preparing the metadata does not submit it.

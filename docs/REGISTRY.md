@@ -8,17 +8,17 @@ Install uv and Apple Command Line Tools, then run the published version's setup 
 
 `eaos` remains the short command. Starting with the released 0.1.3 package, `every-app-is-open-source` is an alias of the same entry point. Registry clients commonly launch a package by its identifier; the additional name makes that work.
 
-The manifest produces this command after a client supplies the program path:
+The prepared 0.1.4 manifest will produce this command after release and a separately approved Registry submission. Until then, use the published 0.1.3 version:
 
 ```sh
-uvx --python 3.13 every-app-is-open-source@0.1.3 mcp /absolute/path/to/program
+uvx --python 3.13 every-app-is-open-source@0.1.4 mcp /absolute/path/to/program
 ```
 
 The program path is required. `EAOS_RUNTIME_DIR` is optional; if supplied, use the same directory for setup and the client. Analysis projects and evidence are saved beside the selected program.
 
 ## Published listing
 
-Version **0.1.3** was published to the official MCP Registry on **2026-10-19**. The [version-specific entry](https://registry.modelcontextprotocol.io/v0.1/servers/io.github.thomasisalwayslate%2Fevery-app-is-open-source/versions/0.1.3) and the latest-version endpoint were verified after publication, with active status and metadata matching `server.json`.
+Version **0.1.3** was published to the official MCP Registry on **2026-10-19**. The [version-specific entry](https://registry.modelcontextprotocol.io/v0.1/servers/io.github.thomasisalwayslate%2Fevery-app-is-open-source/versions/0.1.3) and the latest-version endpoint were verified after publication, with active status and metadata matching the 0.1.3 `server.json` at publication. The current 0.1.4 metadata is a release candidate; preparing it does not update the live listing.
 
 The published PyPI files matched the checked release artifacts. The live package-name launch command passed the seven-tool native smoke check and saved-evidence checks outside the checkout, using previously verified Java/Ghidra runtimes. The published 0.1.2 package only provides `eaos` and cannot run the package-name command above.
 

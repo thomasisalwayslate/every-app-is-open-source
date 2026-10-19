@@ -2,7 +2,7 @@
 
 Give an AI agent a compiled program and inspect how it works through seven Ghidra-powered MCP tools, with compact replies and traceable evidence.
 
-**On one modified-Doom benchmark, EAOS 0.1.0 returned the same answers as REA 6.7.0 using roughly half the total tokens (52% fewer), with 36% lower API-equivalent cost and 27% lower median time.** All three tools tied on correctness. This is a measured result for that test, not a general accuracy or performance guarantee.
+**On one modified-Doom benchmark, EAOS 0.1.0 returned the same answers as REA 6.7.0 using 52% fewer total tokens, with 36% lower API-equivalent cost and 27% lower median time.** All three tools tied on correctness. This is a measured result for that test, not a general accuracy or performance guarantee.
 
 > **0.1.1 adds input-integrity and validation fixes.** See [CHANGELOG.md](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/CHANGELOG.md). The historical comparison has not been rerun for 0.1.1.
 

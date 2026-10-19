@@ -37,7 +37,7 @@ def check(command, target, report):
             return result
         try:
             initialized = request('initialize', {'protocolVersion': '2025-06-18', 'capabilities': {}, 'clientInfo': {'name': 'eaos-wheel-smoke', 'version': '1'}})
-            assert initialized['serverInfo']['version'] == '0.1.3'
+            assert initialized['serverInfo']['version'] == '0.1.4'
             catalog = request('tools/list')['tools']
             assert len(catalog) == 7
             opened = tool('open_program')

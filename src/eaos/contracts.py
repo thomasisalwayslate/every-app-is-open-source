@@ -17,8 +17,8 @@ TOOLS = [('open_program',
    'required': [],
    'additionalProperties': False}),
  ('search',
-  'Substring search of strings (with xrefs) or functions. Page with next_offset; full=true for '
-  'signatures.',
+  'Find strings with xrefs or functions, including supported Go names and literal-byte matches. '
+  'Go byte matches need a pattern and are slices, not whole strings. Page with next_offset; full=true expands.',
   {'type': 'object',
    'properties': {'kind': {'type': 'string', 'enum': ['strings', 'functions']},
                   'pattern': {'type': 'string', 'maxLength': 10000},
@@ -28,7 +28,7 @@ TOOLS = [('open_program',
    'required': [],
    'additionalProperties': False}),
  ('inspect',
-  'Batch addresses. Default computed pseudocode. mode=calls, references, assembly or all; '
+  'Batch addresses from search; supported Go names included. Default computed pseudocode. mode=calls, references, assembly or all; '
   'full=true expands. Omitted detail: read_evidence.',
   {'type': 'object',
    'properties': {'addresses': {'type': 'array',

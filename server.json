@@ -1,0 +1,52 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.thomasisalwayslate/every-app-is-open-source",
+  "title": "Every App Is Open Source",
+  "description": "Native reverse engineering with Ghidra and evidence on Apple Silicon macOS. Setup required.",
+  "repository": {
+    "url": "https://github.com/thomasisalwayslate/every-app-is-open-source",
+    "source": "github"
+  },
+  "websiteUrl": "https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/docs/SETUP.md",
+  "version": "0.1.3",
+  "packages": [
+    {
+      "registryType": "pypi",
+      "identifier": "every-app-is-open-source",
+      "version": "0.1.3",
+      "runtimeHint": "uvx",
+      "runtimeArguments": [
+        {
+          "type": "named",
+          "name": "--python",
+          "value": "3.13"
+        }
+      ],
+      "transport": {
+        "type": "stdio"
+      },
+      "packageArguments": [
+        {
+          "type": "positional",
+          "value": "mcp"
+        },
+        {
+          "type": "positional",
+          "valueHint": "binary_path",
+          "format": "filepath",
+          "description": "Absolute path to a native program. Analysis and evidence are saved beside it.",
+          "isRequired": true
+        }
+      ],
+      "environmentVariables": [
+        {
+          "name": "EAOS_RUNTIME_DIR",
+          "format": "filepath",
+          "description": "Optional custom Java/Ghidra directory. Use the same value when running eaos setup.",
+          "isRequired": false,
+          "isSecret": false
+        }
+      ]
+    }
+  ]
+}

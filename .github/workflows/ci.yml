@@ -28,5 +28,6 @@ jobs:
           uv pip install --python /tmp/eaos-wheel-check/bin/python --no-deps dist/*.whl
           cd /tmp
           /tmp/eaos-wheel-check/bin/eaos --help
+          /tmp/eaos-wheel-check/bin/every-app-is-open-source --help
           /tmp/eaos-wheel-check/bin/eaos setup --help
       # This workflow has no publication credentials, environment, or upload step.

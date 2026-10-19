@@ -1,3 +1,14 @@
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/thomasisalwayslate/every-app-is-open-source/main/docs/assets/readme-banner-dark.png">
+  <img alt="Every App Is Open Source: give your AI agent a compiled app, it tells you how it works" src="https://raw.githubusercontent.com/thomasisalwayslate/every-app-is-open-source/main/docs/assets/readme-banner-light.png" width="100%">
+</picture>
+
+[![PyPI](https://img.shields.io/pypi/v/every-app-is-open-source?style=flat-square&color=121212&label=pypi)](https://pypi.org/project/every-app-is-open-source/)
+[![CI](https://img.shields.io/github/actions/workflow/status/thomasisalwayslate/every-app-is-open-source/ci.yml?branch=main&style=flat-square&label=ci)](https://github.com/thomasisalwayslate/every-app-is-open-source/actions/workflows/ci.yml)
+[![Python 3.13](https://img.shields.io/badge/python-3.13-121212?style=flat-square)](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/docs/SETUP.md)
+[![macOS Apple Silicon](https://img.shields.io/badge/macOS-Apple%20Silicon-121212?style=flat-square)](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/docs/SETUP.md)
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-121212?style=flat-square)](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/LICENSE)
+
 # Every App Is Open Source
 
 Give an AI agent a compiled program and inspect how it works through seven Ghidra-powered MCP tools, with compact replies and traceable evidence.
@@ -138,3 +149,9 @@ Maintained solely by @thomasisalwayslate. Bug reports and suggestions are welcom
 [Contributing](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/CONTRIBUTING.md) · [Security and reporting status](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/SECURITY.md) · [Changelog](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/CHANGELOG.md). [Report a vulnerability privately](https://github.com/thomasisalwayslate/every-app-is-open-source/security/advisories/new); do not post sensitive binaries or exploit details in a public issue.
 
 Ghidra and PyGhidra are the work of their respective contributors. The comparison baseline is LaurieWired's GhidraMCP; the target is Chocolate Doom, based on id Software's Doom and released under GPLv2. This wrapper is [Apache-2.0](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/LICENSE); retain [NOTICE](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/NOTICE), upstream attribution and the [disclaimer](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/DISCLAIMER.md).
+
+---
+
+Made by [thomasisalwayslate](https://github.com/thomasisalwayslate). I make apps, games and small tools, usually something I want to use myself. More on [my site](https://thomasisalwayslate.github.io), including [the write-up behind this benchmark](https://thomasisalwayslate.github.io/research/same-answers-lower-cost/).
+
+If this saved you some digging, a ⭐ helps other people find it.

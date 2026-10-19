@@ -9,7 +9,9 @@ def schema(properties=None, required=None):
 S = {'type':'string', 'maxLength':10000}
 B = {'type':'boolean','default':False}
 TOOLS = [('open_program',
-  'Selected target, memory map and analysis cache. full=true includes all metadata.',
+  'Open selected target. In MCP, returns analysis status while loading; call again when asked, '
+  'not in a polling loop. Ready: memory map and cached analysis; full=true adds metadata. '
+  'Closing the client stops unfinished analysis.',
   {'type': 'object',
    'properties': {'full': {'type': 'boolean', 'default': False}},
    'required': [],

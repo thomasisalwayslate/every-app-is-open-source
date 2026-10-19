@@ -20,6 +20,8 @@ jobs:
       - run: uv run --no-project --python 3.13 python scripts/check_distribution.py dist
       - name: Unit and artifact boundary tests (no native downloads)
         run: PYTHONPATH=src uv run --no-project --python 3.13 python -m unittest discover -s tests -v
+      - name: Benchmark argument and path isolation regressions
+        run: node --test tests/benchmark-scope.test.mjs
       - name: Installed wheel CLI smoke test
         run: |
           uv venv --python 3.13 /tmp/eaos-wheel-check

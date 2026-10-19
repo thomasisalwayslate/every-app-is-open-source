@@ -4,11 +4,13 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import signal
 from pathlib import Path
 import subprocess
 import sys
 
 from .backend import Backend
+from .session import McpSession
 
 
 from .contracts import TOOLS, validate_arguments
@@ -51,10 +53,14 @@ def serve(backend):
                 if name not in allowed: raise ValueError('Unknown tool')
                 try:
                     arguments = validate_arguments(name, request['params'].get('arguments', {}))
-                    output = getattr(backend,name)(**arguments)
+                    output = (backend.call(name, arguments) if isinstance(backend, McpSession)
+                              else getattr(backend,name)(**arguments))
                     result = {'content':[{'type':'text','text':json.dumps(output,ensure_ascii=False,separators=(',',':'))}]}
                 except Exception as exc:
-                    result = {'isError':True,'content':[{'type':'text','text':json.dumps({'error':str(exc),'classification':'fact','scope':'tool failure; no analysis claim'})}]}
+                    failure = {'error':str(exc),'classification':'fact','scope':'tool failure; no analysis claim'}
+                    if getattr(exc, 'status', None) is not None:
+                        failure['analysis'] = exc.status
+                    result = {'isError':True,'content':[{'type':'text','text':json.dumps(failure)}]}
             else: raise ValueError('Unsupported method')
             response = {'jsonrpc':'2.0','id':request['id'],'result':result}
         except Exception as exc:
@@ -65,8 +71,8 @@ def serve(backend):
 def main():
     parser = argparse.ArgumentParser(description='Every App Is Open Source: small native analysis tools')
     sub = parser.add_subparsers(dest='command',required=True)
-    setup = sub.add_parser('setup',help='Download verified Java/Ghidra and build the Apple Silicon decompiler')
-    setup.add_argument('--rebuild',action='store_true',help='Rebuild the ARM64 decompiler')
+    setup = sub.add_parser('setup',help='Download verified Java/Ghidra and build Apple Silicon native helpers')
+    setup.add_argument('--rebuild',action='store_true',help='Rebuild the ARM64 decompiler and GNU demanglers')
     setup.add_argument('--archive-cache',type=Path,
                        help='Use an existing directory of checksum-verified runtime archives')
     server = sub.add_parser('mcp'); server.add_argument('binary')
@@ -87,11 +93,18 @@ def main():
             parser.exit(1, f'EAOS call failed: {exc}\n')
     protect_stdout()
     backend = Backend(args.binary)
+    session = McpSession(backend) if args.command == 'mcp' else None
+    previous_term = None
+    if session is not None:
+        previous_term = signal.signal(signal.SIGTERM,
+                                      lambda *_: sys.exit(128 + signal.SIGTERM))
     try:
-        if args.command == 'mcp': serve(backend)
+        if session is not None: serve(session)
         else: print(json.dumps(getattr(backend,args.tool)(**arguments),ensure_ascii=False,indent=2))
     finally:
-        backend.close()
+        if session is not None: session.close()
+        else: backend.close()
+        if previous_term is not None: signal.signal(signal.SIGTERM, previous_term)
 
 
 if __name__ == '__main__':

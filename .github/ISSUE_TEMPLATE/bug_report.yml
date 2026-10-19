@@ -1,0 +1,65 @@
+name: Bug report
+description: Something broke or gave a wrong answer.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time. Please don't attach private binaries, credentials or saved evidence from software you don't own. Security problems go through a [private report](https://github.com/thomasisalwayslate/every-app-is-open-source/security/advisories/new), not a public issue.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what you got instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How can I reproduce it?
+      description: The exact command or client setup, and the question you asked your agent if it's about an answer.
+      render: shell
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: EAOS version
+      placeholder: "0.1.1"
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How did you install it?
+      options:
+        - uvx (PyPI)
+        - ./install.sh from a checkout
+        - Something else
+    validations:
+      required: true
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version and chip
+      placeholder: "macOS 26.3, M3"
+    validations:
+      required: true
+  - type: input
+    id: client
+    attributes:
+      label: Agent or MCP client
+      placeholder: "Claude Code, Codex, or something else"
+  - type: textarea
+    id: logs
+    attributes:
+      label: Error output
+      description: Paste the terminal output or the setup log. Remove anything private first.
+      render: text
+  - type: checkboxes
+    id: allowed
+    attributes:
+      label: Before you submit
+      options:
+        - label: The program I was analyzing is one I'm allowed to analyze.
+          required: true

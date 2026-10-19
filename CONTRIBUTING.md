@@ -1,5 +1,11 @@
 # Contributing
 
+EAOS is maintained solely by @thomasisalwayslate. Bug reports and suggestions are welcome; external code contributions are not currently accepted. Pull requests are restricted to repository collaborators.
+
+You are welcome to use, fork and modify the project under its Apache-2.0 license. A fork is a separate project; changes to the official repository and releases remain under the maintainer's control.
+
+## Maintainer development notes
+
 Keep the native tool interface small and compatible. New output must distinguish observed facts, computed results and guesses, and provide working evidence identifiers. Never label a guess exact. Changes to analysis, input capture, validation or evidence need regression tests for their failure cases.
 
 Use Python 3.13 and the existing dependencies. Run `uv build`, then `PYTHONPATH=src uv run --no-project --python 3.13 python -m unittest discover -s tests -v` and `python3 scripts/check_distribution.py dist`. On a configured Apple Silicon Mac, `EAOS_NATIVE_TESTS=1 uv run python -m unittest discover -s tests -p test_integrity.py -v` checks real Ghidra import/cache identity. It uses temporary compiled test programs, not the benchmark oracle.

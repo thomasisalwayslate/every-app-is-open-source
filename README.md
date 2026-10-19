@@ -131,6 +131,8 @@ These commands generate a new random target and private key, not a replay of the
 
 ## Contributing, security and license
 
+Maintained solely by @thomasisalwayslate. Bug reports and suggestions are welcome; external code contributions are not currently accepted.
+
 [Contributing](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/CONTRIBUTING.md) · [Security and reporting status](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/SECURITY.md) · [Changelog](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/CHANGELOG.md). [Report a vulnerability privately](https://github.com/thomasisalwayslate/every-app-is-open-source/security/advisories/new); do not post sensitive binaries or exploit details in a public issue.
 
 Ghidra and PyGhidra are the work of their respective contributors. The comparison baseline is LaurieWired's GhidraMCP; the target is Chocolate Doom, based on id Software's Doom and released under GPLv2. This wrapper is [Apache-2.0](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/LICENSE); retain [NOTICE](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/NOTICE), upstream attribution and the [disclaimer](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/DISCLAIMER.md).

@@ -8,17 +8,17 @@ Install uv and Apple Command Line Tools, then run the published version's setup 
 
 `eaos` remains the short command. Starting with the released 0.1.3 package, `every-app-is-open-source` is an alias of the same entry point. Registry clients commonly launch a package by its identifier; the additional name makes that work.
 
-The prepared 0.1.4 manifest will produce this command after release and a separately approved Registry submission. Until then, use the published 0.1.3 version:
+The checked-in manifest targets 0.1.5. PyPI release and Registry submission are separate steps; preparing metadata does not publish either. The command below requires that package version to be available on PyPI:
 
 ```sh
-uvx --python 3.13 every-app-is-open-source@0.1.4 mcp /absolute/path/to/program
+uvx --python 3.13 every-app-is-open-source@0.1.5 mcp /absolute/path/to/program
 ```
 
 The program path is required. `EAOS_RUNTIME_DIR` is optional; if supplied, use the same directory for setup and the client. Analysis projects and evidence are saved beside the selected program.
 
 ## Published listing
 
-Version **0.1.3** was published to the official MCP Registry on **2026-10-19**. The [version-specific entry](https://registry.modelcontextprotocol.io/v0.1/servers/io.github.thomasisalwayslate%2Fevery-app-is-open-source/versions/0.1.3) and the latest-version endpoint were verified after publication, with active status and metadata matching the 0.1.3 `server.json` at publication. The current 0.1.4 metadata is a release candidate; preparing it does not update the live listing.
+Version **0.1.3** was published to the official MCP Registry on **2026-10-19**. The [version-specific entry](https://registry.modelcontextprotocol.io/v0.1/servers/io.github.thomasisalwayslate%2Fevery-app-is-open-source/versions/0.1.3) and the latest-version endpoint were verified after publication, with active status and metadata matching the 0.1.3 `server.json` at publication. For newer versions, check the [latest-version endpoint](https://registry.modelcontextprotocol.io/v0.1/servers/io.github.thomasisalwayslate%2Fevery-app-is-open-source/versions/latest) and the corresponding version-specific entry. A package release alone does not update that listing.
 
 The published PyPI files matched the checked release artifacts. The live package-name launch command passed the seven-tool native smoke check and saved-evidence checks outside the checkout, using previously verified Java/Ghidra runtimes. The published 0.1.2 package only provides `eaos` and cannot run the package-name command above.
 

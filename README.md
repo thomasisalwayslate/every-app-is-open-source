@@ -8,6 +8,7 @@
 [![Python 3.13](https://img.shields.io/badge/python-3.13-121212?style=flat-square)](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/docs/SETUP.md)
 [![macOS Apple Silicon](https://img.shields.io/badge/macOS-Apple%20Silicon-121212?style=flat-square)](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/docs/SETUP.md)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-121212?style=flat-square)](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/LICENSE)
+[![Every App Is Open Source MCP server – quality and maintenance score on Glama](https://glama.ai/mcp/servers/thomasisalwayslate/every-app-is-open-source/badges/score.svg)](https://glama.ai/mcp/servers/thomasisalwayslate/every-app-is-open-source)
 
 # Every App Is Open Source
 

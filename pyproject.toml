@@ -1,6 +1,6 @@
 [project]
 name = "every-app-is-open-source"
-version = "0.1.5"
+version = "0.1.6"
 description = "Ghidra-powered MCP server for AI agents to reverse engineer native binaries with traceable evidence"
 keywords = ["ghidra", "mcp", "reverse-engineering", "binary-analysis", "static-analysis", "ai-agents", "pyghidra"]
 requires-python = ">=3.13,<3.14"

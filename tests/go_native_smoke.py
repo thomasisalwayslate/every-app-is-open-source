@@ -75,7 +75,10 @@ def check(command, target, report, ollama=False):
                 exact=[i for i in preferred if i['name']==pattern or i['name'].endswith('.'+pattern)]
                 fn=(exact or preferred or items)[0]
                 inspected=tool('inspect',{'addresses':[fn['address']]})
-                row=inspected['data'][0];assert row.get('pseudocode') and row['name']==fn['name'],row
+                row=inspected['data'][0]
+                if 'outline' in row and not row.get('pseudocode'):
+                    row=tool('inspect',{'addresses':[fn['address']],'full':True})['data'][0]
+                assert row.get('pseudocode') and row['name']==fn['name'],row
                 assert row['source']=='go_pclntab' and inspected['classification']=='computed'
                 discovered.append({'query':pattern,'name':fn['name'],'address':fn['address'],'pseudocode_available':True})
             output['functions']=discovered

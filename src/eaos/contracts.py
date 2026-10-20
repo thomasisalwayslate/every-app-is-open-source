@@ -1,6 +1,7 @@
 """Shared tool schemas and strict validation, without third-party validators."""
 import functools
 import inspect
+import re
 
 def schema(properties=None, required=None):
     return {'type':'object','properties':properties or {},'required':required or [],'additionalProperties':False}
@@ -28,16 +29,29 @@ TOOLS = [('open_program',
    'required': [],
    'additionalProperties': False}),
  ('inspect',
-  'Batch addresses from search; supported Go names included. Default computed pseudocode. mode=calls, references, assembly or all; '
-  'full=true expands. Omitted detail: read_evidence.',
+  'Outline first; then one function: find matching text/integer lines or focus by instruction, '
+  'string address/text prefix or callee. Both work in decompile/assembly. Page code only as a last resort '
+  '(full=true, next offset/column). limit=1..80, context=0..20 (find default 2, focus 6). '
+  'find offset pages matches. Full evidence retained.',
   {'type': 'object',
    'properties': {'addresses': {'type': 'array',
                                 'items': {'type': 'string', 'maxLength': 10000},
                                 'minItems': 1,
                                 'maxItems': 8},
                   'mode': {'type': 'string',
-                           'enum': ['decompile', 'assembly', 'references', 'calls', 'all']},
-                  'full': {'type': 'boolean', 'default': False}},
+                           'enum': ['decompile', 'outline', 'assembly', 'references', 'calls', 'all']},
+                  'full': {'type': 'boolean', 'default': False},
+                  'offset': {'type': 'integer', 'minimum': 0},
+                  'column': {'type': 'integer', 'minimum': 0},
+                  'limit': {'type': 'integer', 'minimum': 1, 'maximum': 80},
+                  'context': {'type': 'integer', 'minimum': 0, 'maximum': 20},
+                  'find': schema({'kind': {'type': 'string', 'enum': ['text', 'constant']},
+                                  'value': {'type': 'string', 'minLength': 1, 'maxLength': 256}},
+                                 ['kind', 'value']),
+                  'focus': schema({'kind': {'type': 'string', 'enum': ['address', 'string', 'call']},
+                                   'value': {'type': 'string', 'minLength': 1, 'maxLength': 256},
+                                   'occurrence': {'type': 'integer', 'minimum': 0, 'maximum': 1000000}},
+                                  ['kind', 'value'])},
    'required': ['addresses'],
    'additionalProperties': False}),
  ('read_memory',
@@ -69,7 +83,7 @@ TOOLS = [('open_program',
    'additionalProperties': False}),
  ('read_evidence',
   'Retrieve a content-checked evidence record by its returned id, with character paging. Never '
-  'reads arbitrary paths.',
+  'reads arbitrary paths. For code, prefer inspect outline, then find/focus; page last.',
   {'type': 'object',
    'properties': {'id': {'type': 'string', 'maxLength': 10000},
                   'offset': {'type': 'integer', 'minimum': 0},
@@ -110,13 +124,36 @@ def _validate(value, spec, path):
     elif kind == 'integer':
         if value < spec.get('minimum', -float('inf')) or value > spec.get('maximum', float('inf')):
             raise ValueError(f'{path}: outside allowed range')
-    elif kind == 'string' and len(value) > spec.get('maxLength', 10000):
-        raise ValueError(f'{path}: string too long')
+    elif kind == 'string':
+        if len(value) > spec.get('maxLength', 10000):
+            raise ValueError(f'{path}: string too long')
+        if len(value) < spec.get('minLength', 0):
+            raise ValueError(f'{path}: string too short')
 
 def validate_arguments(name, arguments):
     if name not in SCHEMAS:
         raise ValueError('Unknown tool')
     _validate(arguments, SCHEMAS[name], name)
+    if name == 'inspect':
+        mode = arguments.get('mode', 'decompile')
+        if 'find' in arguments:
+            if 'focus' in arguments or arguments.get('column', 0):
+                raise ValueError('inspect: find cannot combine with focus or column')
+            if len(arguments['addresses']) != 1 or mode not in {'decompile', 'assembly'}:
+                raise ValueError('inspect: find needs one address and decompile/assembly mode')
+            query = arguments['find']
+            if query['kind'] == 'constant' and not re.fullmatch(r'[+-]?(?:0[xX][0-9a-fA-F]+|[0-9]+)', query['value']):
+                raise ValueError('inspect: constant must be a decimal or hexadecimal integer')
+        if 'focus' in arguments:
+            if len(arguments['addresses']) != 1 or mode not in {'decompile', 'assembly', 'all'}:
+                raise ValueError('inspect: focus needs one address and decompile/assembly/all mode')
+            if arguments.get('offset', 0) or arguments.get('column', 0):
+                raise ValueError('inspect: use a focus occurrence or a code cursor, not both')
+        elif 'context' in arguments and 'find' not in arguments:
+            raise ValueError('inspect: context requires focus or find')
+        if arguments.get('column', 0) and (len(arguments['addresses']) != 1 or
+                                           mode not in {'decompile', 'all'}):
+            raise ValueError('inspect: column needs one decompile/all address')
     if name == 'decode_swift_string':
         if ('words' in arguments) == ('address' in arguments):
             raise ValueError('decode_swift_string: supply words or address, not both')

@@ -9,7 +9,7 @@ import time
 from urllib.parse import unquote, urlparse
 
 
-def check(command, target, report):
+def check(command, target, report, expected_version):
     report.parent.mkdir(parents=True, exist_ok=True)
     calls = []
     with report.with_suffix('.stderr.log').open('w') as log:
@@ -37,7 +37,9 @@ def check(command, target, report):
             return result
         try:
             initialized = request('initialize', {'protocolVersion': '2025-06-18', 'capabilities': {}, 'clientInfo': {'name': 'eaos-wheel-smoke', 'version': '1'}})
-            assert initialized['serverInfo']['version'] == '0.1.4'
+            actual_version = initialized['serverInfo']['version']
+            if actual_version != expected_version:
+                raise RuntimeError(f'Expected EAOS {expected_version}, got {actual_version}')
             catalog = request('tools/list')['tools']
             assert len(catalog) == 7
             opened = tool('open_program')
@@ -70,7 +72,8 @@ def check(command, target, report):
             process.stdin.flush()
             assert select.select([process.stdout], [], [], 10)[0]
             assert json.loads(process.stdout.readline())['result']['isError']
-            output = {'status': 'passed', 'version': initialized['serverInfo']['version'],
+            output = {'status': 'passed', 'version': actual_version,
+                      'expected_version': expected_version,
                       'tools': [item['name'] for item in catalog], 'calls': calls,
                       'invalid_boolean_rejected': True, 'target_executed': False}
             report.write_text(json.dumps(output, indent=2) + '\n')
@@ -89,5 +92,7 @@ if __name__ == '__main__':
     parser.add_argument('--eaos', required=True)
     parser.add_argument('--target', type=Path, required=True, help='A compiled tests/fixture.c')
     parser.add_argument('--report', type=Path, required=True)
+    parser.add_argument('--expected-version', required=True,
+                        help='Reviewed release version to require from the installed server')
     args = parser.parse_args()
-    check(args.eaos, args.target.resolve(), args.report.resolve())
+    check(args.eaos, args.target.resolve(), args.report.resolve(), args.expected_version)

@@ -1,6 +1,14 @@
 # Changelog
 
-## 0.1.4 — Unreleased
+## 0.1.5 — 2026-10-20
+
+- Replace large-function head previews with compact outlines of callees, referenced text and candidate return/error sites. Code batches return outlines; complete rendered code and address mappings remain in saved evidence.
+- Extend `inspect` with in-function literal text and decimal/hex integer search in decompiled code and assembly, returning matching lines, bounded context, available addresses and match pagination. Integer search is lexical, not expression evaluation or runtime value recovery.
+- Add focused inspection by instruction, string reference or call, including assembly-only operation without successful decompilation. Keep missing mappings and scan limits explicit rather than substituting guessed code locations.
+- Make sequential code reads resumable with bounded line/column pages, preserving long lines. Keep the same seven tools, content-checked evidence and fact/computed/guess labels; recommend outline, then search/focus, then paging.
+- Add portable failure-case regressions and a native fixture covering search, focus, complete pagination, reply bounds and evidence integrity. This release makes no new benchmark performance or accuracy claim.
+
+## 0.1.4 — 2026-10-19
 
 - Extend the existing seven-tool interface with bounded Go pclntab name discovery and literal-byte string search, including stored Ghidra references at the actual match address. Keep matched slices distinct from complete strings and preserve full evidence.
 - Enrich inspected functions with recovered Go names without renaming Ghidra's project or claiming repaired Go types/ABI. Cache the metadata index beside the program and reuse existing Ghidra analysis; report indexing status and unsupported layouts.

@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.6 — Unreleased
+## 0.1.6 — 2026-10-20
 
 - Distinguish initialized analyzed-image bytes, validated Mach-O loader initial zeros and unavailable memory; preserve per-segment provenance and reject synthetic/partial Swift storage. Keep ordinary initialized-memory replies compact, with full provenance in saved evidence.
 - Extend read_memory with explicit, bounded Go pointer/length table decoding, program-derived byte order/pointer width, invalid-entry reporting and paged compact previews with complete evidence.

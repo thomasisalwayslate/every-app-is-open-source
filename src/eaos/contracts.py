@@ -30,7 +30,8 @@ TOOLS = [('open_program',
    'additionalProperties': False}),
  ('inspect',
   'Outline first; then one function: find matching text/integer lines or focus by instruction, '
-  'string address/text prefix or callee. Both work in decompile/assembly. Page code only as a last resort '
+  'string address/text prefix or callee. For paired code/instructions use focus with mode=all; '
+  'assembly works without decompilation. Page code only as a last resort '
   '(full=true, next offset/column). limit=1..80, context=0..20 (find default 2, focus 6). '
   'find offset pages matches. Full evidence retained.',
   {'type': 'object',
@@ -55,11 +56,16 @@ TOOLS = [('open_program',
    'required': ['addresses'],
    'additionalProperties': False}),
  ('read_memory',
-  'Fact: literal bytes at a virtual address. Default hex; format=utf8 or both for text display.',
+  'Static image bytes, not live memory. Verified Mach-O zero-fill is computed initial state; unknown memory stays unavailable. '
+  'Default hex; format=utf8/both for text. layout=go_strings plus count decodes bounded Go pointer/length entries '
+  '(32 per page, 256 bytes/string); page with offset/next_offset. Full provenance in evidence.',
   {'type': 'object',
    'properties': {'address': {'type': 'string', 'maxLength': 10000},
                   'length': {'type': 'integer', 'minimum': 1, 'maximum': 65536},
-                  'format': {'type': 'string', 'enum': ['hex', 'utf8', 'both']}},
+                  'format': {'type': 'string', 'enum': ['hex', 'utf8', 'both']},
+                  'layout': {'type': 'string', 'enum': ['go_strings']},
+                  'count': {'type': 'integer', 'minimum': 1, 'maximum': 1000000},
+                  'offset': {'type': 'integer', 'minimum': 0, 'maximum': 1000000}},
    'required': ['address'],
    'additionalProperties': False}),
  ('calculate',
@@ -134,6 +140,14 @@ def validate_arguments(name, arguments):
     if name not in SCHEMAS:
         raise ValueError('Unknown tool')
     _validate(arguments, SCHEMAS[name], name)
+    if name == 'read_memory':
+        if 'layout' in arguments:
+            if 'count' not in arguments or 'length' in arguments:
+                raise ValueError('read_memory: go_strings requires count, without length')
+            if arguments.get('offset', 0) > arguments['count']:
+                raise ValueError('read_memory: offset exceeds descriptor count')
+        elif 'count' in arguments or arguments.get('offset', 0):
+            raise ValueError('read_memory: count/offset require layout=go_strings')
     if name == 'inspect':
         mode = arguments.get('mode', 'decompile')
         if 'find' in arguments:

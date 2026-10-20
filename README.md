@@ -65,7 +65,7 @@ I counted every tool call agents made across 24 earlier test runs and built only
 | `open_program` | What the program is: architecture, memory layout, analysis status |
 | `search` | Find text inside the program and where it's used, or find functions |
 | `inspect` | Decompiled code, raw instructions, callers and callees |
-| `read_memory` | Read the actual bytes at an address |
+| `read_memory` | Read static memory or Go string tables, with provenance |
 | `calculate` | Safe arithmetic and byte decoding, so the agent doesn't do math in its head |
 | `decode_swift_string` | Recover text hidden inside Swift code on Apple platforms |
 | `read_evidence` | Pull up the full saved evidence behind any reply, hash-checked |

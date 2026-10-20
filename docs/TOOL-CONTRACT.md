@@ -7,16 +7,16 @@ All argument objects are closed: unknown keys, wrong JSON types, missing require
 | open_program | none | full: boolean | In MCP: starts/checks analysis and returns live status until ready. Once ready: captured-input hash, architecture, memory map, function count; full metadata on request |
 | search | none | kind: strings/functions; pattern: string; offset >= 0; limit 1–200; full: boolean | Defined strings/functions plus supported Go metadata names and literal matches, references and next page |
 | inspect | addresses: 1–8 strings | mode: decompile/outline/assembly/references/calls/all; full; offset/column >= 0; limit 1–80; find or focus; context 0–20 | Outline first, then matching lines or focused snippets; bounded pages last |
-| read_memory | address: string | length: 1–65,536; format: hex/utf8/both | Observed bytes at a virtual address |
+| read_memory | address: string | length: 1–65,536; format: hex/utf8/both; optional layout: go_strings with count and offset | Static analyzed-image bytes, explicit loader initial zeros or bounded Go descriptors; unavailable regions remain explicit |
 | calculate | expression: string | Restricted expression AST, <= 2,000 nodes | Computed expression value; does not verify the expression's premises |
 | decode_swift_string | words or address | words: two unsigned 64-bit integers or integer strings | Computed Swift small-string decode; pointer-backed layouts fail |
 | read_evidence | id: returned 32-character hex ID | offset >= 0; limit 1–40,000 characters | Content-checked saved evidence, paged |
 
-Pseudocode and recovered types/call graphs are **computed** static interpretations. Literal instruction bytes and memory reads are **facts**. Neither proves an interpretation of the program's intent. Indirect calls, undefined strings, unsupported Swift layouts and truncated previews can require more investigation. Full evidence retains the result behind a short preview.
+Pseudocode and recovered types/call graphs are **computed** static interpretations. Literal instruction bytes and initialized analyzed-image reads are **facts**; synthesized loader initial zeros and Go descriptor interpretation are **computed**. Neither proves an interpretation of the program's intent. Indirect calls, undefined strings, unsupported Swift layouts and truncated previews can require more investigation. Full evidence retains the result behind a short preview.
 
-## Focused inspection (unreleased)
+## Focused inspection
 
-The same seven tools now expose bounded inspection views. Released 0.1.4 does not include these changes yet.
+Released 0.1.5 exposes the bounded views below. The compact paired-focus and call-list changes described as unreleased are intended for 0.1.6.
 
 - A single small function can return its code. Above 5,000 characters, the default is an outline, rather than a head preview: size, callees with call-site addresses, referenced text previews, return sites and error candidates. Error candidates are **name-based hints**, not proven error paths. Callees retain first-call order, with Go runtime/internal helpers last. Outline categories include totals and independent next offsets; `mode="outline"` with `offset` pages them.
 - A request for multiple code functions returns outlines, even with `full=true`. Ask for one address to read code. This prevents eight whole functions arriving together.
@@ -55,7 +55,7 @@ Read-only native analysis still parses untrusted input using Ghidra/Java/native 
 
 ## Go discovery
 
-The seven input schemas are unchanged. On detected Go programs, `open_program.data.go` reports the embedded compiler version when its inline build-info encoding is supported, metadata-name availability, parser version and literal-scan coverage. Unknown build-info versions do not establish that a binary is not Go. Go discovery does not replace Ghidra's version-specific type/ABI analysis.
+Go discovery uses the existing search/inspect tools. On detected Go programs, `open_program.data.go` reports the embedded compiler version when its inline build-info encoding is supported, metadata-name availability, parser version and literal-scan coverage. Unknown build-info versions do not establish that a binary is not Go. Go discovery does not replace Ghidra's version-specific type/ABI analysis.
 
 `search(kind="functions", pattern="...")` merges recognized Go pclntab names and Ghidra functions by entry address. `source: go_pclntab` means a name was parsed from retained artifact metadata; it does not recover original source. Duplicate names at different entries remain separate. `inspect` enriches an analyzed function with its Go name and retains `ghidra_name`. A metadata entry without a Ghidra function is explicitly marked `analyzed_function: false`; inspection fails honestly rather than manufacturing pseudocode. Metadata offsets and table provenance are retained in full evidence.
 
@@ -68,3 +68,17 @@ Default search previews cap text at 256 characters and references at eight, pref
 Go name indices are stored beside the selected program in `eaos-analysis/<digest>/go-index-v1.json` with a checksum, bound to the captured target, metadata bytes and parser version. Existing Ghidra projects are reused; Go indexing does not increment `analysis_count` or rewrite historical evidence. Replaced invalid indices are retained alongside the cache. Closing the MCP server stops its owned indexing worker.
 
 The parser recognizes Go 1.18 and 1.20 pclntab layout families, not every future compiler or executable mapping. Native integration has been checked on stripped darwin/arm64 fixtures compiled with Go 1.25.14 and 1.27.1. Multi-section text, obfuscation, absent metadata, unusual load mappings and unsupported layouts may fail discovery. No broader platform, decompilation-accuracy or agent-performance claim follows from those checks.
+
+## Static memory and Go tables (0.1.6, unreleased)
+
+`read_memory` inspects the selected captured program, never a live process. Initialized bytes come from Ghidra's analyzed image and can include loader fixups. Complete reads of initialized bytes keep the compact address/length/requested-format response; segment provenance, UTF-8 validity and static-image caveats remain in saved evidence. Reads involving initial zeros or unavailable bytes report segment origins and whether the requested range was complete; they never skip a gap and concatenate later bytes. An entirely unmapped start is an error. Other unknown/uninitialized memory returns an explicit unavailable segment. Only validated thin Mach-O section commands authorize initial zeros; fat headers and other formats do not gain guessed zero-fill support. Invalid metadata cannot authorize zeros. Segmented reads stop after 64 segments and report a continuation only for that budget limit.
+
+A verified zero-fill segment returns `origin: loader_zero_fill` and **computed**, with its section provenance: “Initial loader state only; current runtime contents are unknown.” The tool does not modify Ghidra memory. Swift decoding from an address requires all 16 bytes to be initialized analyzed-image bytes; synthetic initial zeros or partial/unavailable reads are rejected.
+
+For an explicitly identified Go pointer/length table, use `read_memory(address="<table>", layout="go_strings", count=18, format="utf8")`. `count` is the total number of descriptors (1–1,000,000); `offset` is a descriptor index, not a byte offset. Layout requests require count and cannot also specify length. Pointer size and endianness come from the selected program. No null termination, string-boundary inference, target execution or recursive pointer following occurs.
+
+Each page decodes at most 32 descriptors, with at most 256 preview bytes per string and 8,192 total payload bytes. The compact response also respects the inspection reply budget and can return fewer items; follow its `next_offset`. Raw descriptors, payload bytes, provenance and derivations remain in content-checked evidence, which may require paging to retrieve fully. Empty, invalid, partial and unavailable entries retain their indices. An unavailable descriptor is never interpreted as an empty string. UTF-8 replacement display is marked with `utf8_valid: false`; validity refers to preview bytes only, and a cutoff can split a valid multibyte character. Raw hex remains in evidence. This is computed static interpretation, not proof of runtime strings.
+
+Use `mode="all"` with focus to retrieve bounded pseudocode and matching instruction context in one request; code-only decompile focus stays small. A missing instruction mapping is explicit. Focused all-mode previews omit unrelated caller/callee pages, retained in full evidence. The existing occurrence selector remains; no extra multi-focus schema is introduced. This is surrounding code, not a control-flow slice. Instruction text previews cap at 256 characters; instruction bytes remain available.
+
+Call-list mode honors limit up to the existing maximum of 80 instead of an unconditional cap of 40. Character limits can still shorten a page. Returned counts and each list's next offset describe what actually appeared. Defaults remain small. These are workflow changes, without a new agent speed, token, cost or accuracy claim.

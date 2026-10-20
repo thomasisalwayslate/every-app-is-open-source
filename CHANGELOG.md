@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.6 — Unreleased
+
+- Distinguish initialized analyzed-image bytes, validated Mach-O loader initial zeros and unavailable memory; preserve per-segment provenance and reject synthetic/partial Swift storage.
+- Extend read_memory with explicit, bounded Go pointer/length table decoding, program-derived byte order/pointer width, invalid-entry reporting and paged compact previews with complete evidence.
+- Keep paired focused code/instruction views explicit through mode=all, omit unrelated call lists and keep missing mappings explicit. Honor requested call-list limits within the reply budget; keep the existing seven tools and focus occurrence selector.
+- Add malformed-loader, partial-read, descriptor, pagination and evidence-integrity regressions plus an opt-in native fixture. Historical tool-request replays are diagnostic checks, not new model benchmark or performance claims.
+
 ## 0.1.5 — 2026-10-20
 
 - Replace large-function head previews with compact outlines of callees, referenced text and candidate return/error sites. Code batches return outlines; complete rendered code and address mappings remain in saved evidence.

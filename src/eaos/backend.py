@@ -19,7 +19,7 @@ from .evidence import Evidence
 from .swift import decode_small_string
 from .runtime import configure
 from . import golang
-from . import inspection, native_inspection
+from . import inspection, native_inspection, memory
 
 
 class ProgramBusyError(RuntimeError):
@@ -67,6 +67,7 @@ class Backend:
         self.go_status = None
         self.inspection_cache = OrderedDict()
         self.inspection_cache_bytes = 0
+        self.zero_fill_metadata = None
 
     def _report_stage(self, stage):
         if self.on_stage is not None:
@@ -431,7 +432,8 @@ class Backend:
         listing = self.program.getListing()
         center = listing.getInstructionContaining(address)
         if center is None:
-            shown['focus']['mapping'] = 'no pseudocode or instruction mapping'
+            shown['focus']['mapping'] = ('pseudocode only; no instruction mapping' if match['line'] is not None
+                                         else 'no pseudocode or instruction mapping')
             return
         first = center
         for _ in range(min(context, (limit - 1) // 2)):
@@ -443,8 +445,12 @@ class Backend:
         for _ in range(min(limit, context * 2 + 1)):
             if current is None or not fn.getBody().contains(current.getAddress()):
                 break
-            instructions.append({'address': str(current.getAddress()), 'text': str(current),
-                                 'bytes': bytes((int(b) & 255) for b in current.getBytes()).hex()})
+            text = str(current)
+            item = {'address': str(current.getAddress()), 'text': text[:256],
+                    'bytes': bytes((int(b) & 255) for b in current.getBytes()).hex()}
+            if len(text) > 256:
+                item['text_truncated'] = True
+            instructions.append(item)
             current = listing.getInstructionAfter(current.getAddress())
         if assembly_only:
             shown['focus']['mapping'] = 'assembly'
@@ -503,15 +509,18 @@ class Backend:
                 else:
                     shown = inspection.code_view(row, full=full, offset=offset, column=column,
                                                  limit=limit, focus=focus, context=context)
+                    # Combined context is explicit; code-only focus stays small.
                     self._focus_assembly(fn, shown, context, limit, include_mapped=mode == 'all')
             else:
                 shown = inspection.compact(row)
             for field in ('instructions', 'references', 'callers', 'callees'):
                 if field not in row:
                     continue
-                if find or (focus and field == 'instructions'):
+                if find or (focus and field in {'instructions', 'callers', 'callees'}):
                     continue
                 count = min(limit, 8 if 'pseudocode' in row else 40)
+                if mode == 'calls':
+                    count = limit
                 shown[field] = self._item_page(row[field], offset, count)
                 shown[field+'_total'] = len(row[field])
                 shown[field+'_next_offset'] = offset + count if offset + count < len(row[field]) else None
@@ -533,19 +542,65 @@ class Backend:
              'String previews are bounded; error sites are name-based hints. Missing mappings do not prove absence.']
             if mode!='assembly' or computed_names else [], preview)
 
-    @validated_tool('read_memory')
-    def read_memory(self, address, length=64, format='hex'):
-        self._load()
-        if format not in {'hex','utf8','both'}: raise ValueError('format must be hex, utf8 or both')
-        if not 1 <= length <= 65536: raise ValueError('length must be 1..65536')
+    def _static_read(self, address, length):
         import jpype
-        raw = jpype.JArray(jpype.JByte)(length)
-        count = self.program.getMemory().getBytes(self.address(address),raw)
-        data = bytes(int(x)&255 for x in raw[:count])
-        record = {'address':address,'length':count,'hex':data.hex(),
-            'utf8':data.decode('utf-8',errors='replace')}
-        preview = {k:v for k,v in record.items() if k not in {'hex','utf8'} or format=='both' or k==format}
-        return self.result('read_memory','fact',record,preview=preview)
+        image = self.program.getMemory()
+        if self.zero_fill_metadata is None:
+            try:
+                self.zero_fill_metadata = memory.macho_zero_fill(self.snapshot, int(self.program.getImageBase().getOffset()), self.digest)
+            except ValueError as error:
+                self.zero_fill_metadata = ([], str(error))
+        ranges, metadata_error = self.zero_fill_metadata
+
+        def locate(value):
+            block = image.getBlock(self.address(f'{value:x}'))
+            if block is None:
+                return None
+            return {'end': int(block.getEnd().getOffset())+1,
+                    'initialized': bool(block.isInitialized()), 'name': str(block.getName())}
+
+        def read_bytes(value, count):
+            raw = jpype.JArray(jpype.JByte)(count)
+            try:
+                size = image.getBytes(self.address(f'{value:x}'), raw)
+            except Exception as error:
+                raise ValueError(f'Analyzed-image read failed at {value:x}: {error}') from None
+            return bytes(raw[:size])
+
+        return memory.read_static(address, length, locate, read_bytes, ranges, metadata_error)
+
+    @validated_tool('read_memory')
+    def read_memory(self, address, length=64, format='hex', layout=None, count=None, offset=0):
+        self._load()
+        start = int(self.address(address).getOffset())
+        if layout == 'go_strings':
+            record = memory.go_strings(start, count, offset, int(self.program.getDefaultPointerSize()),
+                'big' if self.program.getLanguage().isBigEndian() else 'little', self._static_read)
+            preview = {k:v for k,v in record.items() if k not in {'items','classification','limitations'}}
+            preview['items'] = []
+            for item in record['items']:
+                shown = {k:v for k,v in item.items() if k not in {'descriptor','payload','classification'}}
+                if payload := item.get('payload'):
+                    shown.update(utf8=payload['utf8'], utf8_valid=payload['utf8_valid'],
+                                 complete=payload['complete'], origins=sorted({s['origin'] for s in payload['segments']}))
+                    if format in {'hex','both'}:
+                        shown['hex'] = payload['hex']
+                if len(json.dumps(preview, ensure_ascii=False))+len(json.dumps(shown, ensure_ascii=False)) > inspection.REPLY_CHARS-256:
+                    break
+                preview['items'].append(shown)
+            next_offset = offset + len(preview['items'])
+            preview['next_offset'] = next_offset if next_offset < count else None
+        else:
+            record = self._static_read(start, length)
+            if record['complete'] and all(s['origin'] == 'analyzed_image' for s in record['segments']):
+                # Ordinary reads keep their existing wire shape. Full static provenance,
+                # UTF-8 validity and loader caveats remain in retrievable evidence.
+                preview = {'address': address, 'length': record['length']}
+                preview.update({k:record[k] for k in ('hex','utf8') if format=='both' or k==format})
+                return self.result('read_memory','fact',record,preview=preview)
+            preview = {k:v for k,v in record.items() if k not in {'classification','limitations'} and
+                       (k not in {'hex','utf8'} or format=='both' or k==format)}
+        return self.result('read_memory',record['classification'],record,record['limitations'],preview)
 
     @validated_tool('calculate')
     def calculate(self, expression):
@@ -559,7 +614,11 @@ class Backend:
     def decode_swift_string(self, words=None, address=None):
         limitations = ['Supports Swift small String storage only; no pointer-backed or Objective-C tagged strings.']
         if address is not None:
-            raw = bytes.fromhex(self.read_memory(address,16)['data']['hex'])
+            self._load()
+            observed = self._static_read(int(self.address(address).getOffset()),16)
+            if not observed.get('complete') or any(s['origin'] != 'analyzed_image' for s in observed['segments']):
+                raise ValueError('Swift storage requires 16 initialized analyzed-image bytes; initial zeros or unknown memory are not runtime storage.')
+            raw = bytes.fromhex(observed['hex'])
             words = [int.from_bytes(raw[:8],'little'),int.from_bytes(raw[8:],'little')]
         else:
             limitations.append('Words were supplied by the caller; their presence in this binary is not established.')

@@ -64,6 +64,31 @@ class InspectionViews(unittest.TestCase):
                 backend.close()
             self.assertFalse(backend.inspection_cache)
 
+    def test_paired_focus_reports_missing_instruction_mapping_and_bounds_text(self):
+        backend=Backend.__new__(Backend)
+        backend.program=Mock();backend.address=Mock(return_value='1010')
+        fn=Mock();fn.getBody.return_value.contains.return_value=True
+        listing=backend.program.getListing.return_value
+        listing.getInstructionContaining.return_value=None
+        for line,expected in ((11,'pseudocode only; no instruction mapping'),
+                              (None,'no pseudocode or instruction mapping')):
+            shown={'focus':{'match':{'address':'1010','line':line}}}
+            backend._focus_assembly(fn,shown,2,5,include_mapped=True)
+            self.assertEqual(shown['focus']['mapping'],expected)
+        from unittest.mock import MagicMock
+        instruction=MagicMock();instruction.__str__.return_value='x'*1000
+        instruction.getAddress.return_value='1010';instruction.getBytes.return_value=[1,2,3,4]
+        listing.getInstructionContaining.return_value=instruction
+        listing.getInstructionAfter.return_value=None
+        shown={'focus':{'match':{'address':'1010','line':11}}}
+        backend._focus_assembly(fn,shown,2,1,include_mapped=True)
+        self.assertEqual(len(shown['instructions'][0]['text']),256)
+        self.assertTrue(shown['instructions'][0]['text_truncated'])
+        self.assertEqual(shown['instructions'][0]['bytes'],'01020304')
+        fn.getBody.return_value.contains.return_value=False
+        with self.assertRaisesRegex(ValueError,'outside'):
+            backend._focus_assembly(fn,shown,2,1,include_mapped=True)
+
     def test_small_default_and_large_outline(self):
         small = function(8)
         self.assertEqual(code_view(small)['pseudocode'], small['pseudocode'])

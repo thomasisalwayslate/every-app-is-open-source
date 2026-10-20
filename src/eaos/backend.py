@@ -518,7 +518,9 @@ class Backend:
                     continue
                 if find or (focus and field in {'instructions', 'callers', 'callees'}):
                     continue
-                count = min(limit, 8) if 'pseudocode' in row else limit
+                count = min(limit, 8 if 'pseudocode' in row else 40)
+                if mode == 'calls':
+                    count = limit
                 shown[field] = self._item_page(row[field], offset, count)
                 shown[field+'_total'] = len(row[field])
                 shown[field+'_next_offset'] = offset + count if offset + count < len(row[field]) else None
@@ -590,6 +592,12 @@ class Backend:
             preview['next_offset'] = next_offset if next_offset < count else None
         else:
             record = self._static_read(start, length)
+            if record['complete'] and all(s['origin'] == 'analyzed_image' for s in record['segments']):
+                # Ordinary reads keep their existing wire shape. Full static provenance,
+                # UTF-8 validity and loader caveats remain in retrievable evidence.
+                preview = {'address': address, 'length': record['length']}
+                preview.update({k:record[k] for k in ('hex','utf8') if format=='both' or k==format})
+                return self.result('read_memory','fact',record,preview=preview)
             preview = {k:v for k,v in record.items() if k not in {'classification','limitations'} and
                        (k not in {'hex','utf8'} or format=='both' or k==format)}
         return self.result('read_memory',record['classification'],record,record['limitations'],preview)
@@ -606,7 +614,8 @@ class Backend:
     def decode_swift_string(self, words=None, address=None):
         limitations = ['Supports Swift small String storage only; no pointer-backed or Objective-C tagged strings.']
         if address is not None:
-            observed = self.read_memory(address,16)['data']
+            self._load()
+            observed = self._static_read(int(self.address(address).getOffset()),16)
             if not observed.get('complete') or any(s['origin'] != 'analyzed_image' for s in observed['segments']):
                 raise ValueError('Swift storage requires 16 initialized analyzed-image bytes; initial zeros or unknown memory are not runtime storage.')
             raw = bytes.fromhex(observed['hex'])

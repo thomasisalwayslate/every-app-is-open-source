@@ -43,6 +43,44 @@ def image_reader(blocks, zero=()):
 
 
 class StaticMemory(unittest.TestCase):
+    def test_ordinary_tool_reads_keep_wire_shape_and_full_evidence(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            target=Path(temporary)/'fixture';target.write_bytes(b'fixture')
+            backend=Backend(str(target))
+            try:
+                read=image_reader([(0x1000,0x1002,b'\xffa')])
+                with patch.object(backend,'_load'),patch.object(backend,'_static_read',side_effect=read),patch.object(backend,'address') as address:
+                    address.return_value.getOffset.return_value=0x1000
+                    for mode in ('hex','utf8','both'):
+                        result=backend.read_memory('0x1000',length=2,format=mode)
+                        expected={'address':'0x1000','length':2}
+                        if mode in {'hex','both'}:expected['hex']='ff61'
+                        if mode in {'utf8','both'}:expected['utf8']='\ufffda'
+                        self.assertEqual(result['data'],expected)
+                        self.assertEqual(result['classification'],'fact')
+                        self.assertEqual(result['limitations'],[])
+                        saved=json.loads(backend.read_evidence(result['evidence']['id'],limit=40000)['text'])
+                        self.assertFalse(saved['data']['utf8_valid'])
+                        self.assertEqual(saved['data']['segments'][0]['origin'],'analyzed_image')
+                        self.assertIn('runtime contents are unknown',saved['data']['limitations'][0])
+            finally:backend.close()
+
+    def test_swift_address_decode_checks_static_record_not_compact_preview(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            target=Path(temporary)/'fixture';target.write_bytes(b'fixture')
+            backend=Backend(str(target))
+            try:
+                raw=b'hello'+b'\0'*10+b'\xe5'
+                read=image_reader([(0x1000,0x1010,raw)])
+                with patch.object(backend,'_load'),patch.object(backend,'_static_read',side_effect=read),patch.object(backend,'address') as address:
+                    address.return_value.getOffset.return_value=0x1000
+                    self.assertEqual(backend.decode_swift_string(address='1000')['data']['text'],'hello')
+                partial=image_reader([(0x1000,0x1008,raw[:8])])(0x1000,16)
+                with patch.object(backend,'_load'),patch.object(backend,'_static_read',return_value=partial),patch.object(backend,'address') as address:
+                    address.return_value.getOffset.return_value=0x1000
+                    with self.assertRaisesRegex(ValueError,'initialized'):backend.decode_swift_string(address='1000')
+            finally:backend.close()
+
     def test_thin_headers_all_endianness_widths_and_relocation(self):
         with tempfile.TemporaryDirectory() as temporary:
             path=Path(temporary)/'fixture'
@@ -207,7 +245,8 @@ class GoDescriptors(unittest.TestCase):
                     self.assertEqual(len(saved['data']['items']),32)
                     self.assertEqual(result['data']['next_offset'],len(result['data']['items']))
                 unavailable=memory.read_static(0x1000,16,lambda a:{'end':0x1010,'name':'bss','initialized':False},lambda a,n:b'', [{'start':0x1000,'end':0x1010}])
-                with patch.object(backend,'read_memory',return_value={'data':unavailable}):
+                with patch.object(backend,'_load'),patch.object(backend,'address') as address,patch.object(backend,'_static_read',return_value=unavailable):
+                    address.return_value.getOffset.return_value=0x1000
                     with self.assertRaisesRegex(ValueError,'initialized'):backend.decode_swift_string(address='1000')
             finally:
                 backend.program=None;backend.close()

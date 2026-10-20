@@ -43,6 +43,8 @@ def check(target, report):
         except ValueError as error:assert 'initialized' in str(error)
         else:raise AssertionError('Synthesized zeros became Swift storage')
         focus=symbol('memory_focus')
+        ordinary=tool('read_memory',address=focus,length=16)
+        assert set(ordinary['data'])=={'address','length','hex'} and ordinary['limitations']==[]
         for mode in ('decompile','all','assembly'):
             focused=tool('inspect',addresses=[focus],mode=mode,focus={'kind':'call','value':'memory_helper'},context=2)
             row=focused['data'][0]
@@ -54,7 +56,10 @@ def check(target, report):
                 assert 'callees' not in row
             if mode=='decompile':
                 assert row['pseudocode'] and 'instructions' not in row
-        calls=tool('inspect',addresses=[symbol('call_page_fixture')],mode='calls',limit=80)['data'][0]
+        page_function=symbol('call_page_fixture')
+        assembly=tool('inspect',addresses=[page_function],mode='assembly',full=True,limit=80)['data'][0]
+        assert len(assembly['instructions'])==40 and assembly['instructions_next_offset']==40
+        calls=tool('inspect',addresses=[page_function],mode='calls',limit=80)['data'][0]
         assert calls['callees_total']==65 and len(calls['callees'])==65 and calls['callees_next_offset'] is None
         assert len(json.dumps(calls,separators=(',',':'))) <= REPLY_CHARS
         report.parent.mkdir(parents=True,exist_ok=True)

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.9 — 2026-10-23
+
+- Add bounded application-root inventory with an explicit external workspace and component selection. Capture verified bytes outside signed bundles; preserve existing standalone bundle-path rejection, component/profile identity, cancellation and earlier evidence. Native-file sessions expose eight tools; application-directory sessions expose eleven.
+- Add `trace_calls` for bounded static caller/callee traversal with instruction-backed sites, per-node coverage and an unresolved frontier. Existing Objective-C aliases can expose structured class/selector identities; indirect dispatch and complete Swift/C/Zig paths remain unproved.
+- Add initial partial JavaScript/ASAR inspection: bounded metadata and literal observations, explicit unsupported layouts/syntax, byte/hash consistency checks and paged evidence. Unterminated quoted arguments cannot become literal facts. Preserve the narrow source-guided ASAR attribution and upstream notices.
+- Local verification on official Electron Fiddle 0.39.0 covered inventory, preload inspection and native arm64 launcher analysis. Its main and renderer bundles exceeded the 1 MiB inspection cap; no IPC graph was established. The bounded Ghostty trace did not establish a complete reload chain. Fixtures and installed-package checks do not imply full Electron support, reconstructed apps, private-app integration, REA parity or a new accuracy/performance result.
+
 ## 0.1.8 — 2026-10-23
 
 - Refuse a program path inside an `.app`, `.framework` or similar bundle before creating any files, with plain copy instructions rather than a shell command containing the filename. Previously the analysis cache could be written inside the bundle.

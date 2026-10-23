@@ -40,7 +40,16 @@ def _reject_bundle_target(target: Path):
 
 
 class Backend:
-    def __init__(self, target: str, architecture='auto', analysis_mode='full'):
+    def __init__(self, target: str, architecture='auto', analysis_mode='full', component_context=None,
+                 capture_cancelled=None):
+        self.component_context = None
+        if component_context is not None:
+            required = {'application_snapshot','component_id','sha256'}
+            if (not isinstance(component_context,dict) or set(component_context) != required or
+                    any(not isinstance(component_context[key],str) or
+                        not re.fullmatch(r'[0-9a-f]{64}',component_context[key]) for key in required)):
+                raise ValueError('Invalid captured application/component context')
+            self.component_context = dict(component_context)
         self.target = Path(target).expanduser().resolve(strict=True)
         if not self.target.is_file():
             raise ValueError("Target must be a regular file")
@@ -54,12 +63,16 @@ class Backend:
             with self.target.open('rb') as source, captured.open('wb') as output:
                 before = os.fstat(source.fileno())
                 while block := source.read(1024 * 1024):
+                    if capture_cancelled and capture_cancelled():
+                        raise InterruptedError('Component capture cancelled; existing evidence preserved')
                     output.write(block)
                     digest.update(block)
                 after = os.fstat(source.fileno())
             if (before.st_size, before.st_mtime_ns, before.st_ctime_ns) != (after.st_size, after.st_mtime_ns, after.st_ctime_ns):
                 raise RuntimeError('Target changed during capture; retry with a stable file')
             self.digest = digest.hexdigest()
+            if self.component_context and self.component_context['sha256'] != self.digest:
+                raise ValueError('Captured component digest differs from application inventory')
             self.directory = analysis_root / self.digest
             snapshot_dir = self.directory / 'input'
             snapshot_dir.mkdir(parents=True, exist_ok=True)
@@ -115,6 +128,8 @@ class Backend:
 
     def _set_profile(self, mode):
         self.identity = identity.context(self.digest, self.selection, mode)
+        if self.component_context:
+            self.identity['application_component'] = self.component_context
         self.analysis_mode = mode
         self.directory = self.capture_directory / 'profiles' / identity.key(self.identity)
         self.directory.mkdir(parents=True, exist_ok=True)
@@ -123,7 +138,8 @@ class Backend:
         return {'profile': self.analysis_mode, 'scope': 'partial' if self.analysis_mode=='quick' else
                 'whole_program_pass' if self.metadata_status=='full_pass_finished' else 'not_ready',
                 'revision': self.revision, 'functions_prepared': len(self.function_readiness),
-                'references': 'incomplete; absence is not established', 'metadata': self.metadata_status}
+                'references': 'incomplete; absence is not established', 'metadata': self.metadata_status,
+                **({'application_component':self.component_context} if self.component_context else {})}
 
     def provenance(self):
         return {**self.coverage(), 'identity': self.identity,
@@ -381,7 +397,7 @@ class Backend:
             fcntl.flock(self.lock, fcntl.LOCK_UN); self.lock.close(); self.lock = None
 
     def result(self, operation, classification, data, limitations=None, preview=None):
-        affected = operation in {'open_program','search','inspect','read_memory','decode_swift_string'}
+        affected = operation in {'open_program','search','inspect','read_memory','decode_swift_string','trace_calls'}
         provenance = self.provenance() if affected else None
         evidence = self.evidence.save(operation, classification, data, limitations, provenance)
         result = {'classification': classification, 'data': data if preview is None else preview,
@@ -441,6 +457,9 @@ class Backend:
         if go:
             item.update(name=go['name'],ghidra_name=item['name'],source='go_pclntab',end=go['end'],
                         name_address=go['name_address'],record_address=go['record_address'])
+        from .objc import method_identities
+        if methods := method_identities(item):
+            item['objective_c_methods'] = methods
         return item
 
     @validated_tool('open_program')
@@ -776,6 +795,41 @@ class Backend:
              'Focused snippets are not control-flow slices; omitted code can affect the result. '
              'String previews are bounded; error sites are name-based hints. Missing mappings do not prove absence.']
             if mode!='assembly' or computed_names else [], preview)
+
+    @validated_tool('trace_calls')
+    def trace_calls(self, address, direction='callees', max_depth=3, max_nodes=32,
+                    max_edges=128, max_seconds=2, per_node_edges=32):
+        from . import tracing, native_calls
+        self._load()
+        self._report_stage('tracing_static_calls')
+        start = self.program.getFunctionManager().getFunctionContaining(self.address(address))
+        start = str(start.getEntryPoint()) if start is not None else str(self.address(address))
+        cancelled = lambda: self.monitor is not None and self.monitor.isCancelled()
+        data = tracing.trace(start, native_calls.provider(self,time.monotonic()+max_seconds,cancelled),
+                             direction=direction, max_depth=max_depth, max_nodes=max_nodes,
+                             max_edges=max_edges, max_seconds=max_seconds,
+                             per_node_edges=per_node_edges, cancel=cancelled)
+        preview = json.loads(json.dumps(data))
+        for field, limit in (('nodes',16),('edges',24),('frontier',16)):
+            preview[field+'_total'] = len(data[field])
+            preview[field] = preview[field][:limit]
+        for node in preview['nodes']:
+            node.pop('aliases',None)
+            for field in ('name','qualified_name'):
+                if field in node and len(node[field])>200:
+                    node[field]=node[field][:200]
+                    node[field+'_truncated']=True
+        while len(json.dumps(preview,ensure_ascii=False))>12000:
+            field=max(('nodes','edges','frontier'),key=lambda key:len(json.dumps(preview[key])))
+            if not preview[field]:break
+            preview[field].pop()
+        preview['preview_truncated'] = any(len(preview[key]) != len(data[key]) for key in ('nodes','edges','frontier'))
+        if preview['preview_truncated']:
+            preview['next'] = 'read_evidence with the returned id retrieves the retained graph/frontier with character paging.'
+        return self.result('trace_calls','computed',data,
+            ['Static instruction/reference relationships only; runtime dispatch is not established.',
+             'The retained frontier includes cutoffs and unknown relationships. '
+             'Exhausting known edges does not prove complete recovery or absence of a path.'],preview)
 
     def _static_read(self, address, length):
         import jpype

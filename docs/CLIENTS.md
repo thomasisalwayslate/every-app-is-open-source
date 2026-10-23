@@ -1,20 +1,20 @@
 # Connect an MCP client
 
-Run setup and compile the example in [SETUP.md](SETUP.md) first. Replace `/absolute/path/to/program` with the selected binary; the server cannot switch targets during a session. These commands select version 0.1.8. For local wheel checks, replace the `--from` value with the absolute wheel path.
+Run setup and compile the example in [SETUP.md](SETUP.md) first. Replace `/absolute/path/to/program` with the selected standalone binary; it stays fixed for that session. An application-directory session can explicitly select one inventoried native component at a time within its fixed root. These commands target 0.1.9. For local wheel checks, replace the `--from` value with the absolute wheel path.
 
 ## Claude Code
 
 ```sh
-claude mcp add --transport stdio --scope local eaos -- uvx --python 3.13 --from every-app-is-open-source==0.1.8 eaos mcp /absolute/path/to/program
+claude mcp add --transport stdio --scope local eaos -- uvx --python 3.13 --from every-app-is-open-source==0.1.9 eaos mcp /absolute/path/to/program
 claude mcp get eaos
 ```
 
-This is a deliberate client configuration change made by you, separate from EAOS setup. Approve the server in the client and start a fresh conversation. Check that its seven tools are listed, then ask the example question. A local configuration applies to the current project.
+This is a deliberate client configuration change made by you, separate from EAOS setup. Approve the server in the client and start a fresh conversation. Check that its eight native tools are listed, then ask the example question. A local configuration applies to the current project.
 
 ## Codex
 
 ```sh
-codex mcp add eaos -- uvx --python 3.13 --from every-app-is-open-source==0.1.8 eaos mcp /absolute/path/to/program
+codex mcp add eaos -- uvx --python 3.13 --from every-app-is-open-source==0.1.9 eaos mcp /absolute/path/to/program
 codex mcp get eaos
 ```
 
@@ -23,7 +23,7 @@ Equivalent TOML in your Codex config (use an absolute `uvx` command path if need
 ```toml
 [mcp_servers.eaos]
 command = "uvx"
-args = ["--python", "3.13", "--from", "every-app-is-open-source==0.1.8", "eaos", "mcp", "/absolute/path/to/program"]
+args = ["--python", "3.13", "--from", "every-app-is-open-source==0.1.9", "eaos", "mcp", "/absolute/path/to/program"]
 startup_timeout_sec = 30
 tool_timeout_sec = 180
 ```
@@ -37,7 +37,7 @@ These configuration commands do not require a particular model. The historical b
   "mcpServers": {
     "eaos": {
       "command": "uvx",
-      "args": ["--python", "3.13", "--from", "every-app-is-open-source==0.1.8", "eaos", "mcp", "/absolute/path/to/program"]
+      "args": ["--python", "3.13", "--from", "every-app-is-open-source==0.1.9", "eaos", "mcp", "/absolute/path/to/program"]
     }
   }
 }
@@ -46,6 +46,12 @@ These configuration commands do not require a particular model. The historical b
 Normal stdout is JSON-RPC only; Java/Ghidra logs go to stderr. Analysis tools return JSON text with `classification`, `data`, `limitations`, and an evidence ID/URI. `read_evidence` returns `classification`, the ID/URI, saved text and paging fields. Failures use `isError: true` and an explicit failure scope. Evidence is local to the server's machine; a remote client cannot open its `file:` URIs directly, but can use `read_evidence` by ID.
 
 A schema is available through `tools/list`; inputs are validated by the server before native work. See [TOOL-CONTRACT.md](TOOL-CONTRACT.md) for limits and interpretation.
+
+## Application-directory sessions
+
+Replace the standalone binary with the application root and append `--workspace /absolute/path/outside-bundles/eaos-workspace` to the MCP command. The workspace must be outside the selected root and all bundles. Check for eleven tools. Start with `inventory_application`; choose a returned native `component_id` with `select_component`, then use `open_program`, `search`, `inspect` and `trace_calls` for that one component. Inventory alone does not start native analysis.
+
+For a JavaScript component, use `inspect_javascript` directly by its inventory ID. It performs bounded lexical inspection, not execution, module resolution or IPC-graph recovery. Follow returned views and offsets, and use `read_evidence` when a compact preview is omitted. Reselect a native component to read its earlier native evidence. See [setup](SETUP.md#application-directory-workflow) for limits and cache behavior.
 
 ## Ask about a running analysis
 

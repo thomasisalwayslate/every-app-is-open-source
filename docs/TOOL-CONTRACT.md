@@ -1,4 +1,4 @@
-# The seven tools
+# Tool contracts
 
 All argument objects are closed: unknown keys, wrong JSON types, missing required fields, invalid enums and out-of-range numbers are rejected. A string `"false"` is not a boolean; a boolean is not accepted as an integer. Strings are limited to 10,000 characters. MCP request lines are limited to 1 MiB characters. Validation runs before Ghidra initialization.
 
@@ -11,8 +11,26 @@ All argument objects are closed: unknown keys, wrong JSON types, missing require
 | calculate | expression: string | Restricted expression AST, <= 2,000 nodes | Computed expression value; does not verify the expression's premises |
 | decode_swift_string | words or address | words: two unsigned 64-bit integers or integer strings | Computed Swift small-string decode; pointer-backed layouts fail |
 | read_evidence | id: returned 32-character hex ID | offset >= 0; limit 1–40,000 characters | Content-checked saved evidence, paged |
+| trace_calls | address: discovered function address | direction callers/callees; max_depth 0–8; max_nodes 1–128; max_edges 1–512; max_seconds 1–30; per_node_edges 1–128 | Bounded static graph, per-node coverage and unresolved frontier |
 
 Pseudocode and recovered types/call graphs are **computed** static interpretations. Literal instruction bytes and initialized analyzed-image reads are **facts**; synthesized loader initial zeros and Go descriptor interpretation are **computed**. Neither proves an interpretation of the program's intent. Indirect calls, undefined strings, unsupported Swift layouts and truncated previews can require more investigation. Full evidence retains the result behind a short preview.
+
+
+## Application scope and bounded call traversal
+
+These contracts target 0.1.9. Native-file sessions expose eight tools (the original seven plus `trace_calls`). Selected application directories expose those eight plus `inventory_application`, `select_component` and `inspect_javascript`. No private-app integration or new platform support is implied. Apple Silicon macOS remains the supported host.
+
+`trace_calls` requires one discovered function `address`. It accepts `direction=callees|callers`, `max_depth=0..8` (default 3), `max_nodes=1..128` (32), `max_edges=1..512` (128), `max_seconds=1..30` (2), and `per_node_edges=1..128` (32). It scans at most 16,384 instructions or 4,096 incoming references per node, checking its deadline/cancellation while enumerating. It does not decompile or silently prepare more functions. Inspect a candidate explicitly before asking for deeper quick-mode traversal. Direct call instruction addresses are `call_site`; outgoing unconditional branches are labelled `direct_outgoing_jump`, not asserted tail calls. Pseudocode line/token locations are not call-site proof.
+
+Results retain nodes, instruction-backed edges, per-node relationship coverage and an unresolved `frontier`: unprepared functions, indirect dispatch, external implementations, failures and limits. `complete` relationship coverage means enumeration of known direct relationships only. A bounded queue exhausted with no more known edges is not complete program recovery or runtime dispatch proof. Compact replies cap nodes/edges/frontier and include totals/truncation; `read_evidence` retrieves the retained graph with character paging. Native owner cancellation/deadlines and existing cache validation still apply. Existing Objective-C bracket aliases also expose computed class/selector/method-kind/implementation metadata; no second metadata parser or receiver-dispatch proof is added.
+
+Application roots require an explicit external `--workspace`. Inventory is lazy and execution-free. Child symlinks are recorded and never followed, including when capturing a component. Workspace paths inside the selected root or any signed bundle are rejected. The existing standalone executable bundle-write guard remains unchanged. Default traversal bounds are 10,000 entries, depth 16, 128 MiB per hashed file, 512 MiB aggregate hashed bytes and 15 seconds. Large native candidates can be recorded from header bytes with an explicit uncaptured/budget status. Gaps and inaccessible/unparsed entries are retained; traversal completeness covers that inventory only, not behavior.
+
+`inventory_application` accepts `pattern`, `limit=1..200` (30), `offset` and `view`. Positive offsets require the same pattern/view; paging never expands analysis. Paths/hashes are observations; directory roles and package-entry associations are labelled interpretations. ASAR parsing admits bounded standard pickle/JSON headers (8 MiB, 10,000 entries), checks duplicate keys, unsafe paths, overlapping/outside ranges and reports unsupported layouts. Linked/unpacked ASAR members are not silently followed or treated as inspected bytes. Declared SHA-256 member integrity is checked when capturing; mismatches and unsupported integrity layouts fail explicitly. An observed digest is a consistency check, not publisher authentication.
+
+`select_component(component_id, architecture?, analysis_mode?)` explicitly selects one inventoried native Mach-O. It captures verified bytes outside the bundle, closes the previous idle owner, and retains the full-analysis default unless quick mode is chosen. Use a persistent MCP session: later native tools address that selected component. Live work must finish or be cancelled before changing selection. Identities bind application snapshot, component path/content, captured container and selected slice, profile, Ghidra and schema/revision. Compact native coverage and immutable evidence identify the component. Evidence for another component is not silently searched or imported; reselect the original component to read its native evidence. Reopening preserves captured bytes and earlier evidence; changed original inputs reject stale captures. First-time preparation still invalidates the derived function index as documented below.
+
+`inspect_javascript` requires an inventoried JavaScript `component_id` and accepts `limit=1..200`, `offset` and a fixed `view`. It only reads verified UTF-8 captures (at most 1 MiB, 100,000 lexical tokens and 2,000 observations). It never imports/executes source, boots Electron, resolves arbitrary modules or follows external files. It records supported literal module specifiers, main/package declarations, preload property occurrences, loadFile/loadURL and IPC call spellings. Comments/quoted fake calls are excluded; templates, escapes, unterminated strings, regex/division, dynamic expressions and unsupported syntax retain explicit gaps. Unterminated quoted arguments are never classified as literal module/channel values. Names such as `ipcMain` can be shadowed: a syntactic occurrence is not an established Electron binding, runtime send, matched IPC edge or call graph. Co-location and equal channel strings do not prove a relationship. Absence of an observation does not establish absence of behavior. Full captured evidence remains separate from compact active results.
 
 ## Focused inspection
 
@@ -85,7 +103,7 @@ Call-list mode honors limit up to the existing maximum of 80 instead of an uncon
 
 ## 0.1.7 analysis profiles and identity
 
-These options are available in released 0.1.7; 0.1.6 commands do not accept them. The seven tools remain unchanged. CLI `mcp` and `call` accept `--architecture auto|arm64|arm64e|x86_64`, `--analysis-mode full|quick`, `--analysis-timeout` and `--request-timeout`. Full analysis is still the default; `full=true` remains output verbosity only.
+These options are available in released 0.1.7; 0.1.6 commands do not accept them. At introduction in 0.1.7 the catalog contained seven tools; 0.1.9 adds `trace_calls` and the directory-only tools described above. CLI `mcp` and `call` accept `--architecture auto|arm64|arm64e|x86_64`, `--analysis-mode full|quick`, `--analysis-timeout` and `--request-timeout`. Full analysis is still the default; `full=true` remains output verbosity only.
 
 On Apple Silicon, a compatible universal input selects actual ARM64 slice bytes (ARM64e fallback), rather than relabelling an x86 import. Explicit architecture choices reject unavailable or ambiguous slices. Thin inputs retain their architecture. Validation checks bounded slice metadata, alignment, overlap, inner CPU/subtype, selected bytes/hash and the Ghidra language/compiler. ARM64e selection is not a complete pointer-authentication/decompilation guarantee. The immutable original container is retained; a universal input also gets a derived read-only slice. Cache identity includes the whole-file hash, slice identity, profile, Ghidra version and index version. New projects and Go indices live in `eaos-analysis/<whole-sha>/profiles/<identity>/`; old projects remain untouched and are not reused by the new format. The target-wide lock prevents competing profiles from owning the same capture.
 
@@ -105,7 +123,7 @@ The stdio reader stays responsive during native operations. `ping`, the catalog 
 
 ### Bounded function-discovery continuation
 
-Use the existing `search` tool in the quick profile. The seven-tool catalog is unchanged. Full-profile search retains offset pagination and rejects discovery cursors before native startup; this feature does not start whole-program analysis.
+Use the existing `search` tool in the quick profile. This continuation stays within `search`; current native sessions contain eight tools. Full-profile search retains offset pagination and rejects discovery cursors before native startup; this feature does not start whole-program analysis.
 
 ```json
 {"kind":"functions","pattern":"handler","limit":10}

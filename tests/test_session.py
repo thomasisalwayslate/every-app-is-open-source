@@ -102,7 +102,7 @@ class Sessions(unittest.TestCase):
             serve(PendingTransport())
         responses = [json.loads(line) for line in output.getvalue().splitlines()]
         self.assertEqual(responses[0]['result'], {})
-        self.assertEqual(len(responses[1]['result']['tools']), 7)
+        self.assertEqual(len(responses[1]['result']['tools']), 8)
         failure = responses[2]['result']
         self.assertTrue(failure['isError'])
         self.assertEqual(json.loads(failure['content'][0]['text'])['analysis']['state'], 'running')

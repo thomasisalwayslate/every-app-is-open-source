@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.8 — 2026-10-23
+
+- Refuse a program path inside an `.app`, `.framework` or similar bundle before creating any files, with plain copy instructions rather than a shell command containing the filename. Previously the analysis cache could be written inside the bundle.
+- Quick-mode literal search now skips writable memory blocks, matching its reported "read-only" scope. Go literal search already did.
+- README: replace the blanket cost/time claim with per-target results including losses, state that the private targets prevent exact replay, clarify that evidence labels describe tool results rather than the agent's answer, add one contiguous first-result route and a validation matrix. SETUP: remove contradictory manual-thinning and 0.1.2 upgrade instructions.
+
 ## 0.1.7 — 2026-10-23
 
 - Reject corrupt candidate search keys before filtering/paging, inconsistent cached payload accounting and nonfinite batch provenance. Verify evidence content IDs and target scope when reading. Check that wheel and source archives contain every reviewed runtime module with matching bytes. Keep conservative discovery invalidation after real function preparation; repeated inspection of prepared functions reuses committed progress.

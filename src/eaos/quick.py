@@ -109,13 +109,19 @@ def initialize(backend, imported):
             timer.cancel()
             backend.program.endTransaction(transaction, accepted)
         _write_state(backend)
+    backend.literal_blocks = literal_blocks(backend)
+
+
+def literal_blocks(backend):
+    """Initialized read-only non-executable blocks within the literal budget, as reported in search coverage."""
     remaining = MAX_LITERAL_BYTES
-    backend.literal_blocks = []
+    selected = []
     for block in backend.program.getMemory().getBlocks():
         size = int(block.getSize())
-        if block.isInitialized() and block.isRead() and not block.isExecute() and size <= remaining:
-            backend.literal_blocks.append((int(block.getStart().getOffset()), backend._block_bytes(block, remaining)))
+        if block.isInitialized() and block.isRead() and not block.isWrite() and not block.isExecute() and size <= remaining:
+            selected.append((int(block.getStart().getOffset()), backend._block_bytes(block, remaining)))
             remaining -= size
+    return selected
 
 
 def walk(entry, ceiling, decode, owner, known_starts):

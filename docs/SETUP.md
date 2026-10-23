@@ -5,10 +5,10 @@ Supported: Apple Silicon macOS, Python 3.13 (uv selects it), uv, and Apple's Com
 Install the package and prepare its native runtimes:
 
 ```sh
-uvx --python 3.13 --from every-app-is-open-source==0.1.7 eaos setup
+uvx --python 3.13 --from every-app-is-open-source==0.1.8 eaos setup
 ```
 
-To test a reviewed local wheel instead, use `uvx --python 3.13 --from /absolute/path/to/every_app_is_open_source-0.1.7-py3-none-any.whl eaos setup`.
+To test a reviewed local wheel instead, use `uvx --python 3.13 --from /absolute/path/to/every_app_is_open_source-0.1.8-py3-none-any.whl eaos setup`.
 
 ## What setup runs and downloads
 
@@ -38,43 +38,40 @@ When opening a program, EAOS writes `eaos-analysis/<sha256>/` **beside that prog
 
 ## macOS app bundles
 
-Copy the executable out of an installed `.app` before analysis. Opening its original `Contents/MacOS` path would put EAOS's cache inside the signed bundle, where writes may fail or invalidate its signature. EAOS inspects the copied executable; it does not open the app's documents or execute the app.
+Copy the executable out of an installed `.app` before analysis. Opening its original `Contents/MacOS` path would put EAOS's cache inside the signed bundle, where writes may fail or invalidate its signature. 0.1.7 does not stop you from doing this; 0.1.8 refuses any path inside an `.app`, `.framework` or similar bundle before writing anything. EAOS inspects the copied executable; it does not open the app's documents or execute the app.
 
 ```sh
 eaos_case="$(mktemp -d /tmp/eaos-app.XXXXXX)"
 cp /absolute/path/Example.app/Contents/MacOS/Example "$eaos_case/Example"
-lipo -archs "$eaos_case/Example"
+uvx --python 3.13 --from every-app-is-open-source==0.1.8 eaos call "$eaos_case/Example" open_program
 ```
 
-Keep the copy and its adjacent evidence directory together. A universal Mach-O contains more than one architecture; choose the intended slice explicitly before analysis. For a copy listing both `x86_64` and `arm64`:
-
-```sh
-lipo "$eaos_case/Example" -thin arm64 -output "$eaos_case/Example-arm64"
-uvx --python 3.13 --from every-app-is-open-source==0.1.7 eaos call "$eaos_case/Example-arm64" open_program
-```
-
-If the executable is already a single architecture, use that copy directly. `arm64e` is a separate architecture name; this example does not establish support for it. An app's main executable may depend on frameworks and resources that are separate analysis targets.
+Keep the copy and its adjacent evidence directory together. A universal executable (check with `lipo -archs`) needs no manual thinning: 0.1.7 selects the ARM64 slice automatically, or use `--architecture` to choose one explicitly (see [analysis options](#017-analysis-options)). An app's main executable may depend on frameworks and resources that are separate analysis targets.
 
 Initial analysis of a large program can take many minutes. In MCP, `open_program` returns the observed stage and elapsed time while work continues; ask the agent to check once when needed. It does not report a percentage or estimate time remaining. Keep the client open. Terminal `eaos call ... open_program` is synchronous, and can also prepare a cached project before a client session. Close the terminal session before opening the same target in MCP.
 
-## Upgrade from 0.1.1
+## Upgrading
 
-Run the 0.1.2 setup command once after upgrading, using the same `EAOS_RUNTIME_DIR` as your client. It builds the newly required C++ helpers from the already installed Ghidra source, without downloading another runtime. Then restart the MCP client/server. A server that already failed initialization needs that restart.
+Run the current setup command (`eaos setup` from `every-app-is-open-source==0.1.8`) once after upgrading, using the same `EAOS_RUNTIME_DIR` as your client, then restart the MCP client/server. Setup reuses an already installed runtime of the same pinned version instead of downloading it again. A server that already failed initialization needs that restart.
 
-Completed analyses are reused. A C++ program analyzed before the helpers were available keeps its old recovered names. To re-analyze it with the new helpers, first close every EAOS session using that program, then **move and preserve** its specific `eaos-analysis/<sha256>/` directory elsewhere. Reopen the copied program to create a new analysis. Keep the previous project and evidence if they are still useful; an interrupted analysis starts over rather than resuming reliably.
+Projects made before 0.1.7 are preserved but not reused: 0.1.7 creates a new project under `profiles/` on first open, so expect one fresh analysis per program. Old projects and evidence are left in place, not migrated or deleted.
+
+### Historical: upgrading from 0.1.1 to 0.1.2
+
+0.1.2 added C++ name-decoding helpers built from the installed Ghidra source. A C++ program analyzed by 0.1.1 kept its old recovered names until re-analyzed. Since 0.1.7 re-analyzes legacy projects anyway, this matters only if you are pinned to 0.1.2–0.1.6: close every EAOS session using that program, **move and preserve** its `eaos-analysis/<sha256>/` directory elsewhere, and reopen it. An interrupted analysis starts over rather than resuming reliably.
 
 ## 0.1.7 analysis options
 
-Version 0.1.7 supports these options after setup. The published package can run either profile:
+These options were introduced in 0.1.7 and remain available in 0.1.8 after setup:
 
 ```sh
-uvx --python 3.13 --from every-app-is-open-source==0.1.7 eaos call /absolute/path/to/program open_program --architecture arm64 --analysis-mode quick
-uvx --python 3.13 --from every-app-is-open-source==0.1.7 eaos mcp /absolute/path/to/program --analysis-mode quick
+uvx --python 3.13 --from every-app-is-open-source==0.1.8 eaos call /absolute/path/to/program open_program --architecture arm64 --analysis-mode quick
+uvx --python 3.13 --from every-app-is-open-source==0.1.8 eaos mcp /absolute/path/to/program --analysis-mode quick
 ```
 
 Full analysis remains the default. Quick mode supports 64-bit ARM/x86 Mach-O. It imports the selected image, recovers available Objective-C metadata and loader-provided names, and searches bounded literal bytes. It does not run whole-program analysis or recover every Swift name. Individual inspections prepare bounded reachable instructions; unresolved indirect jumps, tail edges or unsafe boundaries can leave assembly only or refuse the request. Every affected response reports coverage; missing matches/references do not prove absence.
 
-Universal inputs automatically select ARM64 on Apple Silicon when available (otherwise ARM64e when available); thin inputs keep their architecture. `--architecture arm64|arm64e|x86_64` makes the choice explicit and rejects an unavailable/ambiguous choice. Selection identifies the actual captured slice and verifies its hash, language and mapped executable bytes. No manual `lipo` thinning is needed for these local changes. ARM64e selection is not a claim that all pointer-authentication constructs decompile correctly.
+Universal inputs automatically select ARM64 on Apple Silicon when available (otherwise ARM64e when available); thin inputs keep their architecture. `--architecture arm64|arm64e|x86_64` makes the choice explicit and rejects an unavailable/ambiguous choice. Selection identifies the actual captured slice and verifies its hash, language and mapped executable bytes. No manual `lipo` thinning is needed. ARM64e selection is not a claim that all pointer-authentication constructs decompile correctly.
 
 New projects live under `eaos-analysis/<whole-file-sha256>/profiles/<identity>/`. Identity includes selected slice offset/size/subtype/hash, full/quick profile, pinned Ghidra and index version; the actual compiler/language are validated on reuse. The original whole-file capture remains under `input/`, along with a derived read-only selected slice for universal inputs. Evidence stays under the shared `evidence/`; raw pseudocode uses content-addressed artifacts. Legacy projects and evidence are preserved without destructive migration. One session owns the whole captured target at a time across profiles.
 
@@ -98,7 +95,7 @@ __attribute__((noinline)) int quote(int n) { return n < 4 ? 19 : n * 7 + 3; }
 int main(int argc, char **argv) { puts("eaos fixture anchor"); return quote(argc); }
 C
 clang -O0 /tmp/eaos-example/example.c -o /tmp/eaos-example/example
-uvx --python 3.13 --from every-app-is-open-source==0.1.7 eaos call /tmp/eaos-example/example open_program
+uvx --python 3.13 --from every-app-is-open-source==0.1.8 eaos call /tmp/eaos-example/example open_program
 ```
 
 Expect `classification: computed`, an ARM64 language, a SHA-256, a positive function count and an evidence ID/file URI. Addresses vary by compiler; never copy an address from somebody else's run.

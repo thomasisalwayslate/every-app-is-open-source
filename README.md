@@ -92,11 +92,11 @@ Each session works on a read-only copy of the exact bytes it hashed, so changing
 
 One Ghidra quirk: it won't create projects inside a folder whose name starts with a dot, like `.cache`. Keep the program you're analyzing out of those.
 
-## Local 0.1.7 development changes
+## 0.1.7 analysis options
 
-These changes are **unreleased**; the PyPI commands above still install the published package. Full analysis remains the default. The local CLI and MCP server accept `--analysis-mode quick` for partial metadata and requested-function preparation, and `--architecture arm64` for an explicit Mach-O slice. Quick function search offers explicit bounded index continuation, separately from view-bound result pagination. Quick mode is limited to 64-bit ARM/x86 Mach-O; it does not recover every Swift name or prove missing references are absent. No new speed or accuracy comparison has been run.
+Version **0.1.7 is released**. Full analysis remains the default. The CLI and MCP server accept `--analysis-mode quick` for partial metadata and requested-function preparation, and `--architecture arm64` for an explicit Mach-O slice. Quick function search offers explicit bounded index continuation, separately from view-bound result pagination. Quick mode is limited to 64-bit ARM/x86 Mach-O; it does not recover every Swift name or prove missing references are absent. No new speed or accuracy comparison has been run.
 
-On Apple Silicon, compatible universal inputs select ARM64 automatically. Each captured whole-file hash retains separate architecture/profile/engine caches under `profiles/`, with shared immutable evidence. Legacy projects are preserved; the new cache format does not reuse them. Status remains available during native operations, with configurable deadlines and cancellation. See [setup](docs/SETUP.md#local-017-development-options) and the [tool contract](docs/TOOL-CONTRACT.md#local-017-analysis-profiles-and-identity) before using these local options.
+On Apple Silicon, compatible universal inputs select ARM64 automatically. Each captured whole-file hash retains separate architecture/profile/engine caches under `profiles/`, with shared immutable evidence. Legacy projects are preserved; the new cache format does not reuse them. Status remains available during native operations, with configurable deadlines and cancellation. See [setup](docs/SETUP.md#017-analysis-options) and the [tool contract](docs/TOOL-CONTRACT.md#017-analysis-profiles-and-identity) before using these options.
 
 ## Benchmarks
 

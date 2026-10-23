@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.7 — Unreleased
+## 0.1.7 — 2026-10-23
 
 - Reject corrupt candidate search keys before filtering/paging, inconsistent cached payload accounting and nonfinite batch provenance. Verify evidence content IDs and target scope when reading. Check that wheel and source archives contain every reviewed runtime module with matching bytes. Keep conservative discovery invalidation after real function preparation; repeated inspection of prepared functions reuses committed progress.
 

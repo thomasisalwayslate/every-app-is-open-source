@@ -8,10 +8,10 @@ Install uv and Apple Command Line Tools, then run the published version's setup 
 
 `eaos` remains the short command. Starting with the released 0.1.3 package, `every-app-is-open-source` is an alias of the same entry point. Registry clients commonly launch a package by its identifier; the additional name makes that work.
 
-The checked-in manifest targets the unreleased 0.1.7 candidate. PyPI release and Registry submission are separate steps; preparing metadata does not publish either. The command below deliberately retains published 0.1.6 until 0.1.7 is released:
+The checked-in manifest targets published PyPI version 0.1.7. PyPI release and Registry submission are separate steps; check the Registry endpoint below for listing status. The command below selects the released package:
 
 ```sh
-uvx --python 3.13 every-app-is-open-source@0.1.6 mcp /absolute/path/to/program
+uvx --python 3.13 every-app-is-open-source@0.1.7 mcp /absolute/path/to/program
 ```
 
 The program path is required. `EAOS_RUNTIME_DIR` is optional; if supplied, use the same directory for setup and the client. Analysis projects and evidence are saved beside the selected program.

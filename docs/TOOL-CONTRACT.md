@@ -4,7 +4,7 @@ All argument objects are closed: unknown keys, wrong JSON types, missing require
 
 | Tool | Required input | Optional input / bounds | Result |
 |---|---|---|---|
-| open_program | none | full: boolean; local unreleased: analysis_mode full/quick, cancel boolean | In MCP: starts/checks analysis and returns live status until ready. Once ready: captured-input hash, architecture, memory map, function count; full metadata on request |
+| open_program | none | full: boolean; analysis_mode full/quick, cancel boolean | In MCP: starts/checks analysis and returns live status until ready. Once ready: captured-input hash, architecture, memory map, function count; full metadata on request |
 | search | none | kind: strings/functions; pattern: string; offset >= 0; limit 1–200; full: boolean; local quick functions: index_cursor or view (<=256 chars) | Defined strings/functions plus supported Go metadata names and literal matches, references and next page |
 | inspect | addresses: 1–8 strings | mode: decompile/outline/assembly/references/calls/all; full; offset/column >= 0; limit 1–80; find or focus; context 0–20 | Outline first, then matching lines or focused snippets; bounded pages last |
 | read_memory | address: string | length: 1–65,536; format: hex/utf8/both; optional layout: go_strings with count and offset | Static analyzed-image bytes, explicit loader initial zeros or bounded Go descriptors; unavailable regions remain explicit |
@@ -83,9 +83,9 @@ Use `mode="all"` with focus to retrieve bounded pseudocode and matching instruct
 
 Call-list mode honors limit up to the existing maximum of 80 instead of an unconditional cap of 40. Character limits can still shorten a page. Returned counts and each list's next offset describe what actually appeared. Defaults remain small. These are workflow changes, without a new agent speed, token, cost or accuracy claim.
 
-## Local 0.1.7 analysis profiles and identity
+## 0.1.7 analysis profiles and identity
 
-This section describes unreleased source changes. Published 0.1.6 commands do not accept these options. The seven tools remain unchanged. CLI `mcp` and `call` accept `--architecture auto|arm64|arm64e|x86_64`, `--analysis-mode full|quick`, `--analysis-timeout` and `--request-timeout`. Full analysis is still the default; `full=true` remains output verbosity only.
+These options are available in released 0.1.7; 0.1.6 commands do not accept them. The seven tools remain unchanged. CLI `mcp` and `call` accept `--architecture auto|arm64|arm64e|x86_64`, `--analysis-mode full|quick`, `--analysis-timeout` and `--request-timeout`. Full analysis is still the default; `full=true` remains output verbosity only.
 
 On Apple Silicon, a compatible universal input selects actual ARM64 slice bytes (ARM64e fallback), rather than relabelling an x86 import. Explicit architecture choices reject unavailable or ambiguous slices. Thin inputs retain their architecture. Validation checks bounded slice metadata, alignment, overlap, inner CPU/subtype, selected bytes/hash and the Ghidra language/compiler. ARM64e selection is not a complete pointer-authentication/decompilation guarantee. The immutable original container is retained; a universal input also gets a derived read-only slice. Cache identity includes the whole-file hash, slice identity, profile, Ghidra version and index version. New projects and Go indices live in `eaos-analysis/<whole-sha>/profiles/<identity>/`; old projects remain untouched and are not reused by the new format. The target-wide lock prevents competing profiles from owning the same capture.
 
@@ -103,7 +103,7 @@ The stdio reader stays responsive during native operations. `ping`, the catalog 
 
 `open_program(cancel=true)`, `notifications/cancelled` for an outstanding request, client EOF or server shutdown stops owned native work. Accepted cancellation immediately enters `cancelling` and blocks new native work, including profile switches. Worker shutdown runs away from the stdio reader; ping and status remain available while it waits. Status retains the stopping worker's liveness until it exits, then reports `cancelled`. The shutdown thread is owned and joined by the session, not a detached analysis job. Cancellation/deadline expiry requires restarting the session; there is no silent retry or resume guarantee. Busy target locks remain retryable on an explicit open after the other owner closes. Status has no evidence ID; analysis results do. Terminal calls wait synchronously under the same owner/deadline mechanism. These controls do not create an OS sandbox.
 
-### Bounded function-discovery continuation (local, unreleased)
+### Bounded function-discovery continuation
 
 Use the existing `search` tool in the quick profile. The seven-tool catalog is unchanged. Full-profile search retains offset pagination and rejects discovery cursors before native startup; this feature does not start whole-program analysis.
 

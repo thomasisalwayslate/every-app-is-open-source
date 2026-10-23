@@ -51,6 +51,41 @@ def row_key(row):
     return (address.split(':')[0] if ':' in address else '', int(address.split(':')[-1],16))
 
 
+def candidate_metadata(b, number, deadline, cancelled):
+    """Read one function-start candidate identity; never prepare or index it."""
+    at = b.program.getAddressFactory().getDefaultAddressSpace().getAddress(number)
+    symbols = b.program.getSymbolTable()
+    primary = symbols.getPrimarySymbol(at)
+    name = str(primary.getName()) if primary is not None else 'FUN_'+str(at)
+    qualified = str(primary.getName(True)) if primary is not None else name
+    row = {'address':str(at),'name':name[:MAX_NAME_CHARS], 'source':'function_start_candidate',
+           'analysis':{'state':'not_prepared'}}
+    if len(name)>MAX_NAME_CHARS:row['name_truncated']=True
+    if qualified != name:
+        row['qualified_name']=qualified[:MAX_NAME_CHARS]
+        if len(qualified)>MAX_NAME_CHARS:row['qualified_name_truncated']=True
+    shadowed = b.program.getFunctionManager().getFunctionAt(at) is not None
+    aliases = set()
+    if not shadowed:
+        alias_bytes = 0
+        for i,symbol in enumerate(symbols.getSymbols(at)):
+            if cancelled():raise RuntimeError('Discovery cancelled; current batch rolled back.')
+            if monotonic()>=deadline:raise TimeoutError('time_limit')
+            if i>=128:
+                row['aliases_truncated']=True;break
+            for alias in (str(symbol.getName()),str(symbol.getName(True))):
+                if alias in (name,qualified) or alias in aliases:continue
+                clipped=alias[:MAX_NAME_CHARS]
+                cost=len(clipped.encode())
+                if alias_bytes+cost>MAX_ALIAS_BYTES:
+                    row['aliases_truncated']=True;break
+                aliases.add(clipped);alias_bytes+=cost
+                if clipped != alias:row['aliases_truncated']=True
+            if row.get('aliases_truncated'):break
+    if aliases:row['aliases']=sorted(aliases)
+    return row, shadowed
+
+
 class Index:
     def __init__(self, backend, supplied=False):
         self.backend = backend
@@ -139,36 +174,7 @@ class Index:
     def candidate(self, position, deadline):
         b = self.backend
         number = b.quick_metadata['function_starts'][position]
-        at = b.program.getAddressFactory().getDefaultAddressSpace().getAddress(number)
-        symbols = b.program.getSymbolTable()
-        primary = symbols.getPrimarySymbol(at)
-        name = str(primary.getName()) if primary is not None else 'FUN_'+str(at)
-        qualified = str(primary.getName(True)) if primary is not None else name
-        row = {'address':str(at),'name':name[:MAX_NAME_CHARS], 'source':'function_start_candidate',
-               'analysis':{'state':'not_prepared'}}
-        if len(name)>MAX_NAME_CHARS:row['name_truncated']=True
-        if qualified != name:
-            row['qualified_name']=qualified[:MAX_NAME_CHARS]
-            if len(qualified)>MAX_NAME_CHARS:row['qualified_name_truncated']=True
-        shadowed = b.program.getFunctionManager().getFunctionAt(at) is not None
-        aliases = set()
-        if not shadowed:
-            alias_bytes = 0
-            for i,symbol in enumerate(symbols.getSymbols(at)):
-                if self.cancelled():raise RuntimeError('Discovery cancelled; current batch rolled back.')
-                if monotonic()>=deadline:raise TimeoutError('time_limit')
-                if i>=128:
-                    row['aliases_truncated']=True;break
-                for alias in (str(symbol.getName()),str(symbol.getName(True))):
-                    if alias in (name,qualified) or alias in aliases:continue
-                    clipped=alias[:MAX_NAME_CHARS]
-                    cost=len(clipped.encode())
-                    if alias_bytes+cost>MAX_ALIAS_BYTES:
-                        row['aliases_truncated']=True;break
-                    aliases.add(clipped);alias_bytes+=cost
-                    if clipped != alias:row['aliases_truncated']=True
-                if row.get('aliases_truncated'):break
-        if aliases:row['aliases']=sorted(aliases)
+        row, shadowed = candidate_metadata(b, number, deadline, self.cancelled)
         payload=canonical(row)
         names=' '.join([row['name'],row.get('qualified_name',''),*row.get('aliases',[])]).casefold()
         size=len(payload.encode())+len(names.encode())

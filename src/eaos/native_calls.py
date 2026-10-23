@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import time
+from bisect import bisect_left
 
 
 def provider(backend, deadline, cancelled=lambda: False):
@@ -16,7 +17,20 @@ def provider(backend, deadline, cancelled=lambda: False):
         manager = backend.program.getFunctionManager()
         fn = manager.getFunctionContaining(backend.address(address))
         if fn is None:
-            return {'node': {'address':address}, 'edges': [], 'complete':False,
+            node = {'address': address}
+            # A direct destination can have a known candidate symbol without a
+            # recovered body. Preserve that identity; never promote it to a
+            # prepared function or expand discovery as a side effect of tracing.
+            starts = (getattr(backend, 'quick_metadata', None) or {}).get('function_starts', [])
+            try:
+                number = int(address, 16)
+            except ValueError:
+                number = -1
+            position = bisect_left(starts, number)
+            if backend.analysis_mode == 'quick' and position < len(starts) and starts[position] == number:
+                from .function_discovery import candidate_metadata
+                node, _ = candidate_metadata(backend, number, deadline, lambda: check() or False)
+            return {'node': node, 'edges': [], 'complete':False,
                     'unresolved':[{'address':address,'reason':'No analyzed function; prepare/inspect this candidate explicitly first.'}]}
         start = str(fn.getEntryPoint())
         info = backend.fn_info(fn)

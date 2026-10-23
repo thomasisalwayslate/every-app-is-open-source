@@ -82,6 +82,11 @@ class Sessions(unittest.TestCase):
         self.assertEqual(pending['data']['analysis']['state'], 'running')
         self.assertNotIn('evidence', pending)
         self.assertTrue(self.started.wait(10))
+        # The child event and parent status receiver use independent channels.
+        # Wait for delivery before measuring already-running status calls.
+        with self.session.condition:
+            self.assertTrue(self.session.condition.wait_for(
+                lambda: self.session.status()['stage'] == 'analyzing', timeout=10))
         start = time.monotonic()
         status = self.session.call('open_program', {})['data']['analysis']
         self.assertEqual(status['stage'], 'analyzing')

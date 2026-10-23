@@ -1,6 +1,7 @@
 from types import SimpleNamespace
 import time
 import unittest
+from unittest.mock import patch
 from eaos.native_calls import provider
 
 class Flow:
@@ -61,3 +62,39 @@ class NativeCallProvider(unittest.TestCase):
     def test_deadline_and_cancel_before_native_read(self):
         with self.assertRaises(InterruptedError):provider(backend([]),time.monotonic()+1,lambda:True)('100','callees',8)
         with self.assertRaises(TimeoutError):provider(backend([]),time.monotonic()-1)('100','callees',8)
+
+    def test_unprepared_candidate_keeps_name_without_indexing_or_preparing(self):
+        b = backend([], quick=True)
+        b.program.getFunctionManager().getFunctionContaining = lambda _: None
+        b.quick_metadata = {'function_starts': [0x100, 0x200]}
+        row = {'address':'100','name':'candidate_method','qualified_name':'Class::candidate_method',
+               'source':'function_start_candidate','analysis':{'state':'not_prepared'}}
+        with patch('eaos.function_discovery.candidate_metadata', return_value=(row,False)) as metadata:
+            result = provider(b,time.monotonic()+1)('100','callees',8)
+            self.assertEqual(result['node'],row)
+            self.assertFalse(result['complete'])
+            self.assertEqual(result['edges'],[])
+            self.assertIn('No analyzed function',result['unresolved'][0]['reason'])
+            metadata.assert_called_once()
+        for address,mode in [('101','quick'),('EXTERNAL:100','quick'),('100','full')]:
+            b.analysis_mode = mode
+            with patch('eaos.function_discovery.candidate_metadata') as metadata:
+                result = provider(b,time.monotonic()+1)(address,'callees',8)
+                self.assertEqual(result['node'],{'address':address})
+                metadata.assert_not_called()
+
+    def test_candidate_metadata_cancellation_uses_trace_cancellation_contract(self):
+        b = backend([], quick=True)
+        b.program.getFunctionManager().getFunctionContaining = lambda _: None
+        b.quick_metadata = {'function_starts': [0x100]}
+        calls = 0
+        def cancelled():
+            nonlocal calls
+            calls += 1
+            return calls > 1
+        def metadata(backend, number, deadline, check):
+            check()
+            self.fail('Cancelled metadata lookup continued')
+        with patch('eaos.function_discovery.candidate_metadata', side_effect=metadata):
+            with self.assertRaises(InterruptedError):
+                provider(b,time.monotonic()+1,cancelled)('100','callees',8)

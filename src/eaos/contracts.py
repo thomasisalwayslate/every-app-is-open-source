@@ -12,19 +12,28 @@ B = {'type':'boolean','default':False}
 TOOLS = [('open_program',
   'Open selected target. In MCP, returns analysis status while loading; call again when asked, '
   'not in a polling loop. Ready: memory map and cached analysis; full=true adds metadata. '
-  'Closing the client stops unfinished analysis.',
+  'Full analysis is default. analysis_mode=quick opts into partial metadata/targeted work; '
+  'analysis_mode=full explicitly opens the separate full profile. cancel=true stops owned work. '
+  'Status stays available during operations. full=true changes detail only.',
   {'type': 'object',
-   'properties': {'full': {'type': 'boolean', 'default': False}},
+   'properties': {'full': {'type': 'boolean', 'default': False},
+                  'analysis_mode': {'type':'string','enum':['full','quick']},
+                  'cancel': {'type':'boolean'}},
    'required': [],
    'additionalProperties': False}),
  ('search',
   'Find strings with xrefs or functions, including supported Go names and literal-byte matches. '
-  'Go byte matches need a pattern and are slices, not whole strings. Page with next_offset; full=true expands.',
+  'Matches available class/namespace names and short aliases. Quick-mode references/names are partial; '
+  'missing matches do not prove absence. Quick functions: page next_offset with returned view; '
+  'index_cursor=next_index_cursor explicitly indexes one more bounded batch at offset=0, invalidating old views. '
+  'Byte matches need a pattern and are slices, not whole strings.',
   {'type': 'object',
    'properties': {'kind': {'type': 'string', 'enum': ['strings', 'functions']},
                   'pattern': {'type': 'string', 'maxLength': 10000},
                   'offset': {'type': 'integer', 'minimum': 0},
                   'limit': {'type': 'integer', 'minimum': 1, 'maximum': 200},
+                  'index_cursor': {'type':'string','minLength':1,'maxLength':256},
+                  'view': {'type':'string','minLength':1,'maxLength':256},
                   'full': {'type': 'boolean', 'default': False}},
    'required': [],
    'additionalProperties': False}),
@@ -140,6 +149,11 @@ def validate_arguments(name, arguments):
     if name not in SCHEMAS:
         raise ValueError('Unknown tool')
     _validate(arguments, SCHEMAS[name], name)
+    if name == 'search' and ('index_cursor' in arguments or 'view' in arguments):
+        if arguments.get('kind','strings') != 'functions':
+            raise ValueError('search: discovery cursors require kind=functions')
+        if 'index_cursor' in arguments and ('view' in arguments or arguments.get('offset',0)):
+            raise ValueError('search: index continuation requires offset=0 and no result view')
     if name == 'read_memory':
         if 'layout' in arguments:
             if 'count' not in arguments or 'length' in arguments:
@@ -179,6 +193,15 @@ def validate_arguments(name, arguments):
             if not 0 <= number < (1 << 64):
                 raise ValueError('decode_swift_string: words must be unsigned 64-bit values')
     return arguments
+
+
+def validate_search_profile(arguments, analysis_mode):
+    """Reject incompatible discovery requests before starting a native owner."""
+    if ('index_cursor' in arguments or 'view' in arguments) and analysis_mode!='quick':
+        raise ValueError('Discovery cursors require kind=functions and the quick profile')
+    if (arguments.get('kind','strings')=='functions' and analysis_mode=='quick' and
+            arguments.get('offset',0) and 'view' not in arguments):
+        raise ValueError('Quick function pagination requires the returned view with offset. Restart at offset=0 after index expansion.')
 
 def validated_tool(name):
     def decorate(function):

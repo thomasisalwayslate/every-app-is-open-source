@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.7 — Unreleased
+
+- Reject corrupt candidate search keys before filtering/paging, inconsistent cached payload accounting and nonfinite batch provenance. Verify evidence content IDs and target scope when reading. Check that wheel and source archives contain every reviewed runtime module with matching bytes. Keep conservative discovery invalidation after real function preparation; repeated inspection of prepared functions reuses committed progress.
+
+- Select the compatible ARM64 slice of universal Mach-O inputs on Apple Silicon, with explicit architecture selection and unavailable-choice rejection. Keep immutable whole-file and selected-slice identities; validate slice bytes, Ghidra language/compiler and architecture/profile/engine-aware caches. Preserve legacy projects and evidence without migration.
+- Search available class/namespace-qualified names and aliases while preserving duplicate/overloaded entries and external address spaces. Keep compact previews and avoid whole-binary demangling. Loader/Objective-C metadata is not a guarantee of original Swift name recovery.
+- Add opt-in quick analysis for 64-bit ARM/x86 Mach-O; full stays default. Expose supported metadata and bounded literal searches, prepare requested functions with reachable-flow/ownership validation and independent readiness, and retain useful assembly when safe decompilation is unavailable. Report partial coverage in compact results and evidence.
+- Keep MCP status/ping responsive during native operations. Add configurable initialization/request deadlines, cancellation and owned-worker shutdown. Explicit full-mode transition uses a separate profile, preserving evidence. Invalidate analysis views after mutations and save raw pseudocode as immutable content-addressed artifacts.
+- Add explicit, bounded quick-function index continuation through search, separately from view-bound result pagination. Persist contiguous candidate progress transactionally inside each profile; bind cursors to input, architecture, schema and revision, reject stale views, and retain previous progress/evidence after interruption. Report candidate counts, completion, stop reasons, result/index continuation and match scope in compact output and saved evidence. Keep cancellation shutdown off the reader, expose the cancelling state and reject new native work until shutdown completes.
+- Add portable failure-case tests and small native Objective-C/Swift/universal fixtures. Local readiness/discovery checks used instrumented study binaries; they do not establish shipping-app behavior or general performance. Separate local app/model acceptance checks do not establish reliable answer accuracy. No new comparative benchmark or general performance/accuracy claim follows from these changes.
+
 ## 0.1.6 — 2026-10-20
 
 - Distinguish initialized analyzed-image bytes, validated Mach-O loader initial zeros and unavailable memory; preserve per-segment provenance and reject synthetic/partial Swift storage. Keep ordinary initialized-memory replies compact, with full provenance in saved evidence.

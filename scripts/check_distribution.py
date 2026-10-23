@@ -48,6 +48,8 @@ def check_metadata(data, project):
 def inspect(directory):
     project = tomllib.loads((ROOT/'pyproject.toml').read_text())['project']
     stem = project['name'].replace('-', '_') + '-' + project['version']
+    runtime = {str(p.relative_to(ROOT/'src')):p for p in (ROOT/'src/eaos').iterdir()
+               if p.is_file() and (p.suffix == '.py' or p.name == 'distributions.json')}
     paths = sorted(directory.iterdir())
     artifacts = [p for p in paths if p.is_file() and not p.name.startswith('.')]
     if {p.name for p in artifacts} != {stem+'.tar.gz', stem+'-py3-none-any.whl'}:
@@ -77,9 +79,13 @@ def inspect(directory):
                             'eaos/distributions.json', stem+'.dist-info/METADATA',
                             stem+'.dist-info/entry_points.txt',
                             stem+'.dist-info/licenses/LICENSE', stem+'.dist-info/licenses/NOTICE'}
+                required.update(runtime)
                 if not required.issubset(names):
                     raise ValueError('Wheel is missing code or entry-point metadata')
                 check_metadata(archive.read(stem+'.dist-info/METADATA'), project)
+                for name, source in runtime.items():
+                    if archive.read(name) != source.read_bytes():
+                        raise ValueError('Wheel runtime file differs from reviewed source: '+name)
                 if archive.read('eaos/distributions.json') != (ROOT/'scripts/distributions.json').read_bytes():
                     raise ValueError('Wheel runtime pins differ from the reviewed archive manifest')
         else:
@@ -100,6 +106,12 @@ def inspect(directory):
                     raise ValueError('Source archive is missing installer assets')
                 if 'src/eaos/runtime.py' not in names or 'src/eaos/distributions.json' not in names:
                     raise ValueError('Source archive is missing packaged setup or runtime pins')
+                for name, source in runtime.items():
+                    member='src/'+name
+                    if member not in names:
+                        raise ValueError('Source archive is missing runtime file: '+member)
+                    if archive.extractfile(stem+'/'+member).read() != source.read_bytes():
+                        raise ValueError('Source archive runtime file differs from reviewed source: '+member)
                 check_metadata(archive.extractfile(stem+'/PKG-INFO').read(), project)
         with artifact.open('rb') as stream:
             digest = hashlib.file_digest(stream, 'sha256').hexdigest()

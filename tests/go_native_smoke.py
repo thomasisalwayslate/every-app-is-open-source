@@ -18,8 +18,10 @@ def check(command, target, report, ollama=False):
                              'EAOS_GO_ZERO\0END','EAOS_GO_世界','EAOS_GO_STATIC_HEADER'])
     functions=(['envconfig','parseAndValidateModelRef','allowedHost'] if ollama else
                ['main.fixtureAlpha','main.fixtureStrings','main.main'])
-    calls=[];sequence=0;started=time.monotonic();cache=target.parent/'eaos-analysis'/sha/'go-index-v1.json'
-    existed=cache.exists();old_mtime=cache.stat().st_mtime_ns if existed else None
+    calls=[];sequence=0;started=time.monotonic();capture=target.parent/'eaos-analysis'/sha
+    cache=capture/'go-index-v1.json'
+    previous_caches={str(path):path.stat().st_mtime_ns
+                     for path in [cache,*capture.glob('profiles/*/go-index-v1.json')] if path.is_file()}
     with report.with_suffix('.stderr.log').open('w') as log:
         process=subprocess.Popen([command,'mcp',str(target)],stdin=subprocess.PIPE,stdout=subprocess.PIPE,
                                  stderr=log,text=True,bufsize=1,env=os.environ.copy())
@@ -52,6 +54,13 @@ def check(command, target, report, ollama=False):
                 time.sleep(2);opened=tool('open_program')
             output['open_seconds']=time.monotonic()-started
             assert opened['data']['go']['names']=='available',opened
+            record=json.loads(Path(unquote(urlparse(opened['evidence']['uri']).path)).read_text())
+            profile=record.get('analysis',{}).get('identity')
+            if profile is not None:
+                key=hashlib.sha256(json.dumps(profile,sort_keys=True,separators=(',',':')).encode()).hexdigest()[:24]
+                cache=capture/'profiles'/key/'go-index-v1.json'
+            existed=str(cache) in previous_caches
+            old_mtime=previous_caches.get(str(cache))
             output['open']=opened
             found=[]
             for pattern in strings:

@@ -34,7 +34,8 @@ def check(target, report):
         assert 'pseudocode' not in row and row['outline']['code_characters'] > 5000
         saved = json.loads((backend.evidence.directory / (result['evidence']['id'] + '.json')).read_text())['data'][0]
         assert saved['lines'] and saved['call_sites'] and saved['string_references']
-        debug = backend.directory / 'evidence' / f'function-{large}.c'
+        from urllib.parse import unquote, urlparse
+        debug = Path(unquote(urlparse(saved['pseudocode_artifact']['uri']).path))
         assert saved['pseudocode'] == debug.read_text(), 'Rendered C was altered'
 
         by_string = tool('inspect', addresses=[large], focus={'kind': 'string', 'value': 'inspection fixture large'})['data'][0]

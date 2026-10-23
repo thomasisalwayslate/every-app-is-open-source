@@ -5,6 +5,7 @@ import json
 import multiprocessing
 from pathlib import Path
 import tempfile
+import threading
 import time
 import unittest
 from unittest.mock import patch
@@ -88,8 +89,12 @@ class Sessions(unittest.TestCase):
         self.assertLess(time.monotonic() - start, 0.5)
         requests = [{'id': 1, 'method': 'ping'}, {'id': 2, 'method': 'tools/list'},
                     {'id': 3, 'method': 'tools/call', 'params': {'name': 'search'}}]
+        session = self.session
+        class PendingTransport:
+            def search(self, **_):
+                raise AnalysisUnavailable(session.status())
         with patch('sys.stdin', io.StringIO('\n'.join(map(json.dumps, requests)))), patch('sys.stdout', io.StringIO()) as output:
-            serve(self.session)
+            serve(PendingTransport())
         responses = [json.loads(line) for line in output.getvalue().splitlines()]
         self.assertEqual(responses[0]['result'], {})
         self.assertEqual(len(responses[1]['result']['tools']), 7)
@@ -117,6 +122,13 @@ class Sessions(unittest.TestCase):
     def test_bad_arguments_do_not_start_native_work(self):
         with self.assertRaises(ValueError):
             self.session.call('open_program', {'full': 'false'})
+        self.assertIsNone(self.session.process)
+        with self.assertRaisesRegex(ValueError,'quick profile'):
+            self.session.call('search',{'kind':'functions','index_cursor':'not-a-cursor'})
+        self.assertIsNone(self.session.process)
+        self.backend.analysis_mode='quick'
+        with self.assertRaisesRegex(ValueError,'returned view'):
+            self.session.call('search',{'kind':'functions','offset':1})
         self.assertIsNone(self.session.process)
 
     def test_native_style_values_cross_transport_as_json(self):
@@ -150,11 +162,68 @@ class Sessions(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, 'closed'):
             self.session.call('open_program', {})
 
+    def test_explicit_cancel_during_initialization_stops_without_restart(self):
+        self.session.call('open_program',{})
+        self.assertTrue(self.started.wait(10))
+        result=self.session.call('open_program',{'cancel':True})
+        self.assertEqual(result['data']['analysis']['state'],'cancelled')
+        self.assertIsNone(self.session.process)
+        with self.assertRaises(AnalysisUnavailable):self.session.call('search',{})
+        with self.assertRaises(AnalysisUnavailable):self.session.call('open_program',{'analysis_mode':'quick'})
+        self.assertIsNone(self.session.process)
+
+    def test_initial_analysis_deadline_stops_blocked_worker(self):
+        session=McpSession(self.backend,initial_wait=0.01,analysis_timeout=0.2)
+        self.addCleanup(session.close)
+        session.call('open_program',{})
+        deadline=time.monotonic()+5
+        while session.state not in ('cancelled','failed')and time.monotonic()<deadline:time.sleep(0.02)
+        self.assertIn('deadline',session.status()['error'])
+        session.close()
+
+    def test_notification_cancels_initial_owner_without_blocking(self):
+        self.session.call('open_program',{},request_id=41)
+        self.assertTrue(self.started.wait(10))
+        start=time.monotonic()
+        self.assertTrue(self.session.cancel_request(41))
+        self.assertLess(time.monotonic()-start,0.5)
+        self.assertEqual(self.session.call('open_program',{})['data']['analysis']['state'],'cancelling')
+        self.session.close()
+        self.assertFalse(self.session.shutdown_thread.is_alive())
+
+    def test_cancellation_during_profile_switch_cannot_start_replacement_owner(self):
+        self.ready()
+        entered,release=threading.Event(),threading.Event()
+        original_stop=self.session._stop_worker
+        failures=[]
+        def blocked_stop():
+            entered.set()
+            if not release.wait(5):raise RuntimeError('Test failed to release shutdown')
+            original_stop()
+        def change_profile():
+            try:self.session.wait_ready('quick')
+            except AnalysisUnavailable as error:failures.append(error.status['state'])
+        with patch.object(self.session,'_stop_worker',side_effect=blocked_stop),patch.object(self.session,'_start')as start:
+            switch=threading.Thread(target=change_profile)
+            cancellation=threading.Thread(target=self.session.cancel)
+            try:
+                switch.start();self.assertTrue(entered.wait(5));cancellation.start()
+                deadline=time.monotonic()+5
+                while self.session.status()['state']!='cancelling'and time.monotonic()<deadline:time.sleep(0.01)
+                self.assertEqual(self.session.status()['state'],'cancelling')
+            finally:
+                release.set();switch.join(5);cancellation.join(5)
+            self.assertFalse(switch.is_alive());self.assertFalse(cancellation.is_alive())
+            start.assert_not_called()
+        self.assertEqual(failures,['cancelling'])
+        self.assertEqual(self.session.status()['state'],'cancelled')
+        self.assertIsNone(self.session.process)
+
     def test_open_retries_after_another_process_releases_program_lock(self):
         backend = LockingBackend(str(self.backend.target))
         session = McpSession(backend, initial_wait=5)
         self.addCleanup(session.close)
-        with (backend.directory / 'session.lock').open('a+') as holder:
+        with (backend.capture_directory / 'session.lock').open('a+') as holder:
             fcntl.flock(holder, fcntl.LOCK_EX | fcntl.LOCK_NB)
             with self.assertRaisesRegex(AnalysisUnavailable, 'already open'):
                 session.call('open_program', {})

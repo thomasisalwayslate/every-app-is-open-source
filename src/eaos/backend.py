@@ -14,12 +14,12 @@ import time
 import tempfile
 from pathlib import Path
 
-from .contracts import validated_tool
+from .contracts import validated_tool, validate_search_profile
 from .evidence import Evidence
 from .swift import decode_small_string
 from .runtime import configure
 from . import golang
-from . import inspection, native_inspection, memory
+from . import inspection, native_inspection, memory, identity
 
 
 class ProgramBusyError(RuntimeError):
@@ -27,7 +27,7 @@ class ProgramBusyError(RuntimeError):
 
 
 class Backend:
-    def __init__(self, target: str):
+    def __init__(self, target: str, architecture='auto', analysis_mode='full'):
         self.target = Path(target).expanduser().resolve(strict=True)
         if not self.target.is_file():
             raise ValueError("Target must be a regular file")
@@ -57,7 +57,29 @@ class Backend:
             else:
                 captured.chmod(0o444)
                 captured.replace(self.snapshot)
-        self.evidence = Evidence(self.directory / 'evidence', self.digest)
+        self.capture_directory = self.directory
+        self.evidence = Evidence(self.capture_directory / 'evidence', self.digest)
+        self.selection = identity.select(self.snapshot, architecture)
+        self.architecture = architecture
+        self.import_snapshot = self.snapshot
+        if self.selection and self.selection['universal']:
+            self.import_snapshot = self.snapshot.parent / ('slice-'+self.selection['sha256'])
+            if not self.import_snapshot.exists():
+                with self.snapshot.open('rb') as source, self.import_snapshot.open('xb') as output:
+                    source.seek(self.selection['offset'])
+                    remaining = self.selection['size']
+                    while remaining:
+                        block = source.read(min(1024*1024, remaining))
+                        if not block:
+                            raise ValueError('Captured universal slice is truncated')
+                        output.write(block)
+                        remaining -= len(block)
+                self.import_snapshot.chmod(0o444)
+            with self.import_snapshot.open('rb') as source:
+                if hashlib.file_digest(source, 'sha256').hexdigest() != self.selection['sha256']:
+                    raise ValueError('Stored selected slice is corrupt; original evidence was preserved')
+        self.analysis_mode = analysis_mode
+        self._set_profile(analysis_mode)
         self.program = self.project = self.consumer = self.decompiler = None
         self.lock = None
         self.on_stage = None
@@ -68,6 +90,31 @@ class Backend:
         self.inspection_cache = OrderedDict()
         self.inspection_cache_bytes = 0
         self.zero_fill_metadata = None
+        self.revision = 0
+        self.function_readiness = {}
+        self.quick_metadata = None
+        self.discovery_index = None
+        self.quick_name_coverage = None
+        self.literal_blocks = []
+        self.metadata_status = 'not_started'
+        self.monitor = None
+
+    def _set_profile(self, mode):
+        self.identity = identity.context(self.digest, self.selection, mode)
+        self.analysis_mode = mode
+        self.directory = self.capture_directory / 'profiles' / identity.key(self.identity)
+        self.directory.mkdir(parents=True, exist_ok=True)
+
+    def coverage(self):
+        return {'profile': self.analysis_mode, 'scope': 'partial' if self.analysis_mode=='quick' else
+                'whole_program_pass' if self.metadata_status=='full_pass_finished' else 'not_ready',
+                'revision': self.revision, 'functions_prepared': len(self.function_readiness),
+                'references': 'incomplete; absence is not established', 'metadata': self.metadata_status}
+
+    def provenance(self):
+        return {**self.coverage(), 'identity': self.identity,
+                **({'language': str(self.program.getLanguageID()),
+                    'compiler': str(self.program.getCompilerSpec().getCompilerSpecID())} if self.program is not None else {})}
 
     def _report_stage(self, stage):
         if self.on_stage is not None:
@@ -76,7 +123,7 @@ class Backend:
     def _load(self):
         if self.program is not None:
             return
-        self.lock = (self.directory / 'session.lock').open('a+')
+        self.lock = (self.capture_directory / 'session.lock').open('a+')
         try:
             fcntl.flock(self.lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
@@ -102,28 +149,69 @@ class Backend:
         from ghidra.util.task import TaskMonitor
         from ghidra.program.util import GhidraProgramUtilities
         from ghidra.app.decompiler import DecompInterface
-        monitor = TaskMonitor.DUMMY
+        from ghidra.util.task import TaskMonitorAdapter
+        self.monitor = monitor = TaskMonitorAdapter()
+        manifest = self.directory / 'identity.json'
+        if manifest.exists():
+            if json.loads(manifest.read_text()) != self.identity:
+                raise RuntimeError('Analysis cache identity mismatch; cache and evidence were preserved')
+        elif (self.directory / 'ghidra').exists():
+            raise RuntimeError('Analysis cache identity missing; cache was preserved')
+        else:
+            manifest.write_text(json.dumps(self.identity, sort_keys=True, indent=2))
         project_dir = self.directory / 'ghidra'; project_dir.mkdir(exist_ok=True)
         self.project = pyghidra.open_project(project_dir, 'program', create=True)
         started = time.monotonic()
-        imported = self.project.getProjectData().getFile('/'+self.target.name) is None
+        imported = self.project.getProjectData().getFile('/target') is None
         self._report_stage('importing' if imported else 'loading_cache')
         if imported:
-            results = pyghidra.program_loader().project(self.project).source(str(self.snapshot)).name(self.target.name).load()
+            loader = pyghidra.program_loader().project(self.project).source(str(self.import_snapshot)).name('target')
+            if self.selection and self.selection['language']:
+                loader = loader.language(self.selection['language'])
+            results = loader.load()
             try:
                 results.getPrimary().save(monitor)
             finally:
                 results.close()
-        self.program, self.consumer = pyghidra.consume_program(self.project, '/'+self.target.name)
+        self.program, self.consumer = pyghidra.consume_program(self.project, '/target')
         imported_digest = str(self.program.getExecutableSHA256()).lower()
-        if imported_digest != self.digest:
+        expected_digest = self.selection['sha256'] if self.selection else self.digest
+        if imported_digest != expected_digest:
             raise RuntimeError(
                 'Ghidra program hash does not match the captured input. '
                 'The cache may be from an affected 0.1.0 session; move this '
                 'analysis directory aside and retry. Existing evidence was preserved.'
             )
+        if self.selection and self.selection['language'] and str(self.program.getLanguageID()) != self.selection['language']:
+            raise RuntimeError('Wrong-architecture cache language; project was preserved')
+        loaded_path = self.directory / 'loaded.json'
+        loaded_identity = {'input_sha256':expected_digest,'language':str(self.program.getLanguageID()),
+                           'compiler':str(self.program.getCompilerSpec().getCompilerSpecID())}
+        if imported:
+            loaded_path.write_text(json.dumps(loaded_identity,sort_keys=True))
+        else:
+            try:
+                if json.loads(loaded_path.read_text()) != loaded_identity:
+                    raise ValueError('Loaded identity differs')
+            except (ValueError,OSError) as error:
+                raise RuntimeError('Cache language/compiler/input provenance missing or corrupt; preserved') from error
+        self.quick_metadata = identity.metadata(self.import_snapshot)
+        self._verify_selected_bytes()
+        metadata_path = self.directory / 'analysis.json'
+        if metadata_path.exists():
+            try:
+                previous = json.loads(metadata_path.read_text())
+            except ValueError as error:
+                raise RuntimeError('Corrupt analysis cache provenance; preserved without reuse') from error
+            if (previous.get('identity') != self.identity or
+                    previous.get('language') != str(self.program.getLanguageID()) or
+                    previous.get('compiler') != str(self.program.getCompilerSpec().getCompilerSpecID())):
+                raise RuntimeError('Cache language/compiler/profile identity mismatch; preserved without reuse')
         analyzed = False
-        if imported or not GhidraProgramUtilities.isAnalyzed(self.program):
+        if self.analysis_mode == 'quick':
+            from . import quick
+            quick.initialize(self, imported)
+        elif imported or not GhidraProgramUtilities.isAnalyzed(self.program):
             self._report_stage('analyzing')
             log = pyghidra.analyze(self.program)
             self._report_stage('saving')
@@ -132,15 +220,45 @@ class Backend:
             analyzed = True
         metadata_path = self.directory / 'analysis.json'
         metadata = json.loads(metadata_path.read_text()) if metadata_path.exists() else {}
-        metadata.update(target=str(self.target), sha256=self.digest,
-            ghidra_version='12.1.4', language=str(self.program.getLanguageID()))
+        metadata.update(target=str(self.target), sha256=self.digest, identity=self.identity,
+            ghidra_version='12.1.4', language=str(self.program.getLanguageID()),
+            compiler=str(self.program.getCompilerSpec().getCompilerSpecID()))
         if analyzed:
             metadata['analysis_count'] = metadata.get('analysis_count', 0) + 1
             metadata['analysis_seconds'] = time.monotonic() - started
         metadata_path.write_text(json.dumps(metadata, indent=2))
+        if self.analysis_mode == 'full':
+            self.metadata_status = 'full_pass_finished'
         self._load_go()
         self.decompiler = DecompInterface()
         self.decompiler.openProgram(self.program)
+
+    def _verify_selected_bytes(self):
+        if not self.quick_metadata:
+            return
+        import jpype
+        for section in self.quick_metadata['sections']:
+            if section['name'] != '__text' or not section['size']:
+                continue
+            size = min(64, section['size'])
+            address = self.program.getAddressFactory().getDefaultAddressSpace().getAddress(section['address'])
+            raw = jpype.JArray(jpype.JByte)(size)
+            self.program.getMemory().getBytes(address, raw)
+            with self.import_snapshot.open('rb') as source:
+                source.seek(section['offset'])
+                if bytes(raw) != source.read(size):
+                    raise RuntimeError('Selected-slice executable bytes do not match imported memory; cache preserved')
+
+    def invalidate_views(self):
+        self.inspection_cache.clear()
+        self.inspection_cache_bytes = 0
+        self.zero_fill_metadata = None
+        self.quick_name_coverage = None
+        if self.discovery_index is not None:
+            self.discovery_index.close()
+            self.discovery_index = None
+        if self.decompiler is not None:
+            self.decompiler.flushCache()
 
     def _block_bytes(self, block, maximum=golang.MAX_TABLE_BYTES):
         import jpype
@@ -231,6 +349,9 @@ class Backend:
         if skipped:self.go_status['literal_skipped_blocks'] = skipped
 
     def close(self):
+        if self.discovery_index is not None:
+            self.discovery_index.close()
+            self.discovery_index = None
         self.inspection_cache.clear()
         self.inspection_cache_bytes = 0
         if self.decompiler is not None:
@@ -246,10 +367,15 @@ class Backend:
             fcntl.flock(self.lock, fcntl.LOCK_UN); self.lock.close(); self.lock = None
 
     def result(self, operation, classification, data, limitations=None, preview=None):
-        evidence = self.evidence.save(operation, classification, data, limitations)
-        return {'classification': classification, 'data': data if preview is None else preview,
+        affected = operation in {'open_program','search','inspect','read_memory','decode_swift_string'}
+        provenance = self.provenance() if affected else None
+        evidence = self.evidence.save(operation, classification, data, limitations, provenance)
+        result = {'classification': classification, 'data': data if preview is None else preview,
                 'limitations': limitations or [],
                 'evidence': {'id': evidence['id'], 'uri': evidence['uri']}}
+        if affected:
+            result['analysis'] = self.coverage()
+        return result
 
     def address(self, address):
         result = self.program.getAddressFactory().getAddress(str(address))
@@ -259,7 +385,11 @@ class Backend:
 
     def function(self, address):
         addr = self.address(address)
-        fn = self.program.getFunctionManager().getFunctionContaining(addr)
+        if self.analysis_mode == 'quick':
+            from . import quick
+            return quick.prepare(self, addr)
+        manager = self.program.getFunctionManager()
+        fn = manager.getFunctionAt(addr) or manager.getFunctionContaining(addr)
         go = self.go_functions.get(f'{int(addr.getOffset()):x}')
         if go and fn is not None and fn.getEntryPoint() != addr:
             raise ValueError('Go metadata identifies '+go['name']+
@@ -273,14 +403,41 @@ class Backend:
     def fn_info(self, fn):
         item = {'address': str(fn.getEntryPoint()), 'name': str(fn.getName()),
                 'signature': str(fn.getSignature()), 'size': int(fn.getBody().getNumAddresses())}
-        go = self.go_functions.get(f'{int(fn.getEntryPoint().getOffset()):x}')
+        qualified = str(fn.getName(True))
+        if qualified != item['name']:
+            item['qualified_name'] = qualified
+        aliases = set()
+        for index, symbol in enumerate(self.program.getSymbolTable().getSymbols(fn.getEntryPoint())):
+            if index == 128:
+                item['aliases_truncated'] = True
+                break
+            for name in (str(symbol.getName()), str(symbol.getName(True))):
+                if name not in (item['name'], qualified):
+                    aliases.add(name)
+        if aliases:
+            item['aliases'] = sorted(aliases)[:128]
+            if len(aliases) > 128:
+                item['aliases_truncated'] = True
+        if fn.isExternal():
+            item['external'] = True
+        if self.analysis_mode == 'quick':
+            item['analysis'] = ({'state':'external_no_body'} if fn.isExternal() else
+                self.function_readiness.get(str(fn.getEntryPoint()), {'state':'not_prepared'}))
+        go = self.go_functions.get(f'{int(fn.getEntryPoint().getOffset()):x}') if not fn.isExternal() else None
         if go:
             item.update(name=go['name'],ghidra_name=item['name'],source='go_pclntab',end=go['end'],
                         name_address=go['name_address'],record_address=go['record_address'])
         return item
 
     @validated_tool('open_program')
-    def open_program(self, full=False):
+    def open_program(self, full=False, analysis_mode=None, cancel=False):
+        if cancel:
+            raise ValueError('Cancellation is handled by the owning session')
+        if analysis_mode is not None and analysis_mode != self.analysis_mode:
+            self.close()
+            self._set_profile(analysis_mode)
+            self.revision, self.function_readiness, self.quick_metadata = 0, {}, None
+            self.quick_name_coverage = None
         self._load()
         blocks = [{'name':str(b.getName()),'start':str(b.getStart()),'end':str(b.getEnd()),
             'read':bool(b.isRead()),'write':bool(b.isWrite()),'execute':bool(b.isExecute())}
@@ -300,7 +457,12 @@ class Backend:
             ['Recovered functions/types are computed, not original source.'], preview)
 
     @validated_tool('search')
-    def search(self, kind='strings', pattern='', offset=0, limit=30, full=False):
+    def search(self, kind='strings', pattern='', offset=0, limit=30, full=False,
+               index_cursor=None, view=None):
+        profile_arguments={'kind':kind,'offset':offset}
+        if index_cursor is not None:profile_arguments['index_cursor']=index_cursor
+        if view is not None:profile_arguments['view']=view
+        validate_search_profile(profile_arguments,self.analysis_mode)
         self._load()
         if not 0 <= offset or not 1 <= limit <= 200:
             raise ValueError('offset must be nonnegative and limit 1..200')
@@ -309,15 +471,32 @@ class Backend:
         rows = []
         limitations = ['Search is static discovery, not proof of runtime behavior or absence of other text.']
         coverage = None
+        index = page_view = None
         if kind == 'functions':
+            if self.analysis_mode == 'quick':
+                from . import function_discovery
+                index,page_view=function_discovery.open_index(self,index_cursor,view)
+                self._report_stage('searching_function_names')
             seen = set()
-            for fn in self.program.getFunctionManager().getFunctions(True):
+            seen_identities = set()
+            import itertools
+            manager = self.program.getFunctionManager()
+            for fn in itertools.chain(manager.getFunctions(True), manager.getExternalFunctions()):
                 item = self.fn_info(fn)
-                seen.add(f'{int(fn.getEntryPoint().getOffset()):x}')
-                if pattern in (item['name']+' '+item['signature']+' '+item.get('ghidra_name','')).casefold(): rows.append(item)
+                if item['address'] in seen_identities:
+                    continue
+                seen_identities.add(item['address'])
+                if self.analysis_mode=='quick':
+                    item.setdefault('source','external_function' if fn.isExternal() else 'ghidra_function')
+                if not fn.isExternal():
+                    seen.add(int(fn.getEntryPoint().getOffset()))
+                names = [item['name'],item['signature'],item.get('qualified_name',''),item.get('ghidra_name',''),*item.get('aliases',[])]
+                if pattern in ' '.join(names).casefold(): rows.append(item)
             for item in self.go_functions.values():
-                if item['address'] not in seen and pattern in item['name'].casefold():
+                if int(item['address'],16) not in seen and pattern in item['name'].casefold():
                     rows.append({**item,'source':'go_pclntab','analyzed_function':False})
+            if self.analysis_mode == 'quick':
+                coverage = {'function_candidates': self.quick_name_coverage}
         elif kind == 'strings':
             from java.lang import String
             literals, complete = golang.literal_matches(self.go_literals,query) if self.go_status and query else ([],True)
@@ -336,6 +515,13 @@ class Backend:
                 else:
                     rows.append({'address':str(item.getAddress()),'text':text,'source':'ghidra_defined','extent':'defined_data'})
             rows.extend(literals)
+            if self.analysis_mode == 'quick' and query:
+                extra, complete = golang.literal_matches(self.literal_blocks, query)
+                existing = {item['address'] for item in rows}
+                rows.extend({**item,'source':'literal_bytes'} for item in extra if item['address'] not in existing)
+                coverage = {'literal_search_complete_within_budget': complete,
+                            'scope':'bounded initialized read-only non-executable blocks',
+                            'references':'partial; empty does not establish absence'}
             if self.go_status:
                 coverage = {'literal_bytes':self.go_status['literal_bytes'],
                     'scope':'initialized read-only non-executable blocks, excluding named pclntab',
@@ -348,8 +534,13 @@ class Backend:
                 limitations.append('literal_bytes rows are matched slices, not complete Go string objects; references are Ghidra computations.')
         else:
             raise ValueError('kind must be strings or functions')
-        rows.sort(key=lambda item:int(item['address'],16))
-        page = rows[offset:offset+limit]
+        result_view = None
+        if index is not None:
+            page,matches,result_view=index.matches(pattern,rows,offset,limit,page_view)
+        else:
+            rows.sort(key=lambda item:(item['address'].split(':')[0] if ':' in item['address'] else '', int(item['address'].split(':')[-1],16)))
+            matches=len(rows)
+            page = rows[offset:offset+limit]
         if kind=='strings':
             for item in page:
                 refs = []
@@ -362,12 +553,15 @@ class Backend:
                 item['references']=refs
                 refs.sort(key=lambda ref:(ref['function'] is None,int(ref['address'],16),ref['type']))
                 item['reference_count']=len(refs)
-                item.setdefault('references_complete',True)
+                item.setdefault('references_complete',self.analysis_mode != 'quick')
         if self.go_index:
             provenance = {k:v for k,v in self.go_index.items() if k!='functions'}
         else:provenance=None
-        data = {'kind':kind,'matches':len(rows),'items':page,
-                'next_offset':offset+limit if offset+limit<len(rows) else None}
+        data = {'kind':kind,'matches':matches,'items':page,
+                'next_offset':offset+limit if offset+limit<matches else None}
+        if result_view is not None:
+            data.update(view=result_view,has_more_results=data['next_offset'] is not None,
+                matches_scope='matches within available metadata plus committed candidate prefix; incomplete discovery is a lower bound, never proof of absence')
         if coverage is not None:data['coverage']=coverage
         if provenance is not None:data['go_metadata']=provenance
         if self.go_status and self.go_status['names']=='unavailable' and kind=='functions':
@@ -379,6 +573,15 @@ class Backend:
                 item.pop('signature',None); item.pop('size',None)
                 item.pop('name_address',None);item.pop('record_address',None)
                 item.pop('defined_data',None)
+                for field in ('name','qualified_name','ghidra_name'):
+                    if field in item and len(item[field]) > 160:
+                        item[field] = item[field][:160]
+                        item[field+'_truncated'] = True
+                if 'aliases' in item:
+                    item['aliases_truncated'] = item.get('aliases_truncated',False) or len(item['aliases']) > 4 or any(len(a)>160 for a in item['aliases'])
+                    item['aliases'] = [a[:160] for a in item['aliases'][:4]]
+                if 'analysis' in item:
+                    item['analysis'] = {k:v for k,v in item['analysis'].items() if k in ('state','revision')}
                 cap = 256
                 if 'text' in item and len(item['text'])>cap:
                     item['text_total']=len(item['text']);item['text']=item['text'][:cap];item['text_truncated']=True
@@ -470,16 +673,32 @@ class Backend:
         for address in addresses:
             addr = self.address(address)
             if mode == 'references':
+                import itertools
+                native_refs = self.program.getReferenceManager().getReferencesTo(addr)
+                if self.analysis_mode == 'quick':
+                    native_refs = itertools.islice(native_refs,4096)
                 refs = [{'from':str(r.getFromAddress()),'to':str(r.getToAddress()),
                     'type':str(r.getReferenceType()),
                     'function':self.fn_info(fn) if (fn:=self.program.getFunctionManager().getFunctionContaining(r.getFromAddress())) else None}
-                    for r in self.program.getReferenceManager().getReferencesTo(addr)]
+                    for r in native_refs]
                 row = {'address':str(addr),'references':refs}
+                if self.analysis_mode == 'quick':
+                    row['analysis'] = {'state':'partial_references','limit':4096}
                 fn = None
             else:
                 fn = self.function(address)
-                row = dict(self._function_view(fn)) if mode in {'decompile', 'outline', 'all'} else self.fn_info(fn)
-            if mode in {'assembly','all'}:
+                row = self.fn_info(fn)
+                if mode in {'decompile', 'outline', 'all'}:
+                    try:
+                        if fn.isExternal():
+                            raise ValueError('External function has no imported instruction body')
+                        if self.analysis_mode == 'quick' and row.get('analysis',{}).get('state') != 'flow_prepared':
+                            raise ValueError('Safe complete flow was not established in quick mode; use assembly or full analysis')
+                        row = dict(self._function_view(fn))
+                    except Exception as error:
+                        row['decompile_error'] = str(error)
+                        row['hint'] = 'Available instructions below; explicitly choose full analysis if more recovery is needed.'
+            if mode in {'assembly','all'} or row.get('decompile_error'):
                 row['instructions'] = [{'address':str(i.getAddress()), 'text':str(i),
                     'bytes':bytes((int(b)&255) for b in i.getBytes()).hex()}
                     for i in self.program.getListing().getInstructions(fn.getBody(),True)]
@@ -493,7 +712,9 @@ class Backend:
             if self.go_index and row.get('source') == 'go_pclntab':
                 row.setdefault('go_metadata', {k: v for k, v in self.go_index.items() if k != 'functions'})
             rows.append(row)
-            if find:
+            if row.get('decompile_error'):
+                shown = {**inspection.compact(row), 'decompile_error':row['decompile_error'], 'hint':row['hint']}
+            elif find:
                 shown = inspection.find_view(row, find, assembly=mode == 'assembly',
                                              offset=offset, limit=limit, context=context)
             elif mode == 'assembly' and focus:
@@ -516,7 +737,7 @@ class Backend:
             for field in ('instructions', 'references', 'callers', 'callees'):
                 if field not in row:
                     continue
-                if find or (focus and field in {'instructions', 'callers', 'callees'}):
+                if (find or (focus and field in {'instructions', 'callers', 'callees'})) and not row.get('decompile_error'):
                     continue
                 count = min(limit, 8 if 'pseudocode' in row else 40)
                 if mode == 'calls':
@@ -536,7 +757,7 @@ class Backend:
             row['view'] = shown
             preview.append(shown)
         computed_names = any(row.get('source')=='go_pclntab' for row in rows)
-        return self.result('inspect','fact' if mode=='assembly' and not computed_names and not (find or focus) else 'computed',rows,
+        return self.result('inspect','computed',rows,
             ['Pseudocode, recovered names, types and call graph are computed static interpretations; indirect calls may be unresolved.',
              'Focused snippets are not control-flow slices; omitted code can affect the result. '
              'String previews are bounded; error sites are name-based hints. Missing mappings do not prove absence.']
@@ -547,7 +768,12 @@ class Backend:
         image = self.program.getMemory()
         if self.zero_fill_metadata is None:
             try:
-                self.zero_fill_metadata = memory.macho_zero_fill(self.snapshot, int(self.program.getImageBase().getOffset()), self.digest)
+                expected = self.selection['sha256'] if self.selection else self.digest
+                ranges, error = memory.macho_zero_fill(self.import_snapshot, int(self.program.getImageBase().getOffset()), expected)
+                if self.selection:
+                    for item in ranges:
+                        item['container_section_header_file_offset'] = item['section_header_file_offset']+self.selection['offset']
+                self.zero_fill_metadata = (ranges, error)
             except ValueError as error:
                 self.zero_fill_metadata = ([], str(error))
         ranges, metadata_error = self.zero_fill_metadata

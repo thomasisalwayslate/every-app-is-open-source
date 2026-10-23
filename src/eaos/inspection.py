@@ -13,11 +13,13 @@ REPLY_CHARS = 16000
 def compact(item):
     """Keep searchable identities in evidence, not repeated large signatures."""
     row = {k: v for k, v in item.items() if k in
-           {'address', 'name', 'ghidra_name', 'size', 'source', 'signature'}}
-    for key in ('name', 'ghidra_name', 'signature'):
+           {'address', 'name', 'qualified_name', 'ghidra_name', 'size', 'source', 'signature', 'analysis', 'external'}}
+    for key in ('name', 'qualified_name', 'ghidra_name', 'signature'):
         if key in row and len(row[key]) > 160:
             row[key + '_truncated'] = True
             row[key] = row[key][:160]
+    if 'analysis' in row:
+        row['analysis'] = {k:v for k,v in row['analysis'].items() if k in ('state','revision','limitations')}
     return row
 
 

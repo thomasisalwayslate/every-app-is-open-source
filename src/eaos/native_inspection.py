@@ -60,7 +60,9 @@ def build(backend, fn):
                                       ClangFieldToken, ClangLabelToken)
     from ghidra.program.model.symbol import IllegalCharCppTransformer
 
-    result = backend.decompiler.decompileFunction(fn, 60, TaskMonitor.DUMMY)
+    backend._report_stage('decompiling:'+str(fn.getEntryPoint()))
+    result = backend.decompiler.decompileFunction(fn, 20 if backend.analysis_mode=='quick' else 60,
+                                                 backend.monitor or TaskMonitor.DUMMY)
     if not result.decompileCompleted():
         raise RuntimeError(str(result.getErrorMessage()))
     markup = result.getCCodeMarkup()
@@ -109,7 +111,7 @@ def build(backend, fn):
     row.update(pseudocode=original, lines=lines,
                **references)
     row['coverage']['line_mapping'] = mapping
-    (backend.directory / 'evidence' / f'function-{fn.getEntryPoint()}.c').write_text(original)
+    row['pseudocode_artifact'] = backend.evidence.artifact(original)
     return row
 
 

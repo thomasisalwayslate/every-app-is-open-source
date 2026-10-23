@@ -30,6 +30,7 @@ class GoMetadata(unittest.TestCase):
     def test_inspect_rejects_a_different_overlapping_ghidra_function(self):
         from eaos.backend import Backend
         backend=object.__new__(Backend)
+        backend.analysis_mode='full'
         address=Mock();address.getOffset.return_value=0x1000
         backend.address=Mock(return_value=address)
         backend.go_functions={'1000':{'name':'main.expected'}}

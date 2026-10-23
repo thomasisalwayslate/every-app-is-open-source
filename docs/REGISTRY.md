@@ -1,6 +1,6 @@
 # MCP Registry listing
 
-I keep the Registry metadata in [`server.json`](../server.json). It describes a local stdio server for native programs on Apple Silicon macOS. It does not add JavaScript, Android or other planned coverage.
+I keep the Registry metadata in [`server.json`](../server.json). It describes a local stdio server for native programs on Apple Silicon macOS. It does not add JavaScript, Android or other possible coverage.
 
 ## Before connecting
 
@@ -8,7 +8,7 @@ Install uv and Apple Command Line Tools, then run the published version's setup 
 
 `eaos` remains the short command. Starting with the released 0.1.3 package, `every-app-is-open-source` is an alias of the same entry point. Registry clients commonly launch a package by its identifier; the additional name makes that work.
 
-The checked-in manifest targets 0.1.6. PyPI release and Registry submission are separate steps; preparing metadata does not publish either. The command below requires that package version to be available on PyPI:
+The checked-in manifest targets the unreleased 0.1.7 candidate. PyPI release and Registry submission are separate steps; preparing metadata does not publish either. The command below deliberately retains published 0.1.6 until 0.1.7 is released:
 
 ```sh
 uvx --python 3.13 every-app-is-open-source@0.1.6 mcp /absolute/path/to/program

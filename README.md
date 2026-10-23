@@ -92,6 +92,12 @@ Each session works on a read-only copy of the exact bytes it hashed, so changing
 
 One Ghidra quirk: it won't create projects inside a folder whose name starts with a dot, like `.cache`. Keep the program you're analyzing out of those.
 
+## Local 0.1.7 development changes
+
+These changes are **unreleased**; the PyPI commands above still install the published package. Full analysis remains the default. The local CLI and MCP server accept `--analysis-mode quick` for partial metadata and requested-function preparation, and `--architecture arm64` for an explicit Mach-O slice. Quick function search offers explicit bounded index continuation, separately from view-bound result pagination. Quick mode is limited to 64-bit ARM/x86 Mach-O; it does not recover every Swift name or prove missing references are absent. No new speed or accuracy comparison has been run.
+
+On Apple Silicon, compatible universal inputs select ARM64 automatically. Each captured whole-file hash retains separate architecture/profile/engine caches under `profiles/`, with shared immutable evidence. Legacy projects are preserved; the new cache format does not reuse them. Status remains available during native operations, with configurable deadlines and cancellation. See [setup](docs/SETUP.md#local-017-development-options) and the [tool contract](docs/TOOL-CONTRACT.md#local-017-analysis-profiles-and-identity) before using these local options.
+
 ## Benchmarks
 
 I test it against REA and GhidraMCP whenever I point it at something new. The results live in [BENCHMARKS.md](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/BENCHMARKS.md), one row per target, each linked to every run and answer.
@@ -107,7 +113,7 @@ Want to check my work? [Run your own](https://github.com/thomasisalwayslate/ever
 
 ## What's next
 
-Right now it handles compiled programs. Next up are JavaScript and Electron apps, then Android, .NET, and watching apps while they run. Each one gets its own benchmark before I claim anything.
+Right now it handles compiled programs on Apple Silicon Macs. I'd like it to inspect more kinds of software, but there's no fixed order or schedule: new support follows a demonstrated need and reproducible tests, and each one gets its own benchmark before I claim anything.
 
 ## Security
 

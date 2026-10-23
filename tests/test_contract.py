@@ -46,6 +46,23 @@ class Contracts(unittest.TestCase):
             other=Evidence(Path(tmp)/'b','b'*64).save('read','fact',{'hex':'00','address':'10'})
             self.assertNotEqual(first['id'],other['id'])
 
+    def test_read_rejects_foreign_target_and_changed_content_identity(self):
+        import hashlib
+        import shutil
+        with tempfile.TemporaryDirectory() as tmp:
+            first=Evidence(Path(tmp)/'first','a'*64)
+            second=Evidence(Path(tmp)/'second','b'*64)
+            item=first.save('inspect','computed',{'code':'return 7;'})
+            for suffix in ('.json','.sha256'):
+                shutil.copy2(first.directory/(item['id']+suffix),second.directory/(item['id']+suffix))
+            with self.assertRaisesRegex(ValueError,'target'):
+                second.read(item['id'])
+            path=Path(item['path']);record=json.loads(path.read_text());record['data']['code']='return 8;'
+            raw=json.dumps(record).encode();path.write_bytes(raw)
+            path.with_suffix('.sha256').write_text(hashlib.sha256(raw).hexdigest()+'\n')
+            with self.assertRaisesRegex(ValueError,'identity'):
+                first.read(item['id'])
+
     def test_catalog_is_seven_tools_with_closed_argument_objects(self):
         self.assertEqual(len(TOOLS),7)
         self.assertTrue(all(t[2]['additionalProperties'] is False for t in TOOLS))

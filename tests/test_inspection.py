@@ -241,7 +241,7 @@ class InspectionViews(unittest.TestCase):
         self.assertEqual(match['line'], 2)
 
     def test_new_contract_validates_before_native_load(self):
-        self.assertEqual(len(TOOLS), 7)
+        self.assertEqual(len(TOOLS), 8)
         bad = [dict(focus={'kind': 'address', 'value': ''}), dict(limit=81),
                dict(context=21), dict(focus={'kind': 'address', 'value': '1000'}, offset=1),
                dict(focus={'kind': 'call', 'value': 'x'}, mode='calls'),

@@ -120,7 +120,7 @@ def main():
     (work/'mcp.stderr').write_text(result.stderr)
     assert result.returncode == 0, result.stderr[-3000:]
     responses = {item['id']:item for line in result.stdout.splitlines() if (item:=json.loads(line))}
-    assert len(responses[2]['result']['tools']) == 7
+    assert len(responses[2]['result']['tools']) == 8
     mcp = json.loads(responses[3]['result']['content'][0]['text'])
     assert mcp['data'][0]['pseudocode'] == code['data'][0]['pseudocode']
     results.append({'tool':'mcp_inspect','result':mcp})
@@ -137,7 +137,7 @@ def main():
     report = {'status':'passed','workspace':str(work),'wheel':str(wheel),'wheel_sha256':sha(wheel),
               'first_setup_seconds':first_seconds,'offline_setup_seconds':offline_seconds,
               'first_receipt':first,'second_receipt':second,'isolation_probe':probe,
-              'target_sha256':target_sha,'mcp_tools':7,'evidence_records_checked':checked,
+              'target_sha256':target_sha,'mcp_tools':8,'evidence_records_checked':checked,
               'results':results,'command':command,'uploaded':False,'pushed':False}
     destination = ROOT/'reports/package-installation'/work.name
     destination.mkdir(parents=True,exist_ok=False)

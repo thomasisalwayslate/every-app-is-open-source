@@ -63,8 +63,9 @@ class Contracts(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,'identity'):
                 first.read(item['id'])
 
-    def test_catalog_is_seven_tools_with_closed_argument_objects(self):
-        self.assertEqual(len(TOOLS),7)
+    def test_native_catalog_adds_distinct_bounded_trace_with_closed_arguments(self):
+        self.assertEqual(len(TOOLS),8)
+        self.assertEqual(TOOLS[-1][0],'trace_calls')
         self.assertTrue(all(t[2]['additionalProperties'] is False for t in TOOLS))
 
     def test_calculator_subprocess_works_with_real_os_limits(self):

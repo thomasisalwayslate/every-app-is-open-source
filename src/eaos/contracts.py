@@ -106,7 +106,41 @@ TOOLS = [('open_program',
    'required': ['id'],
    'additionalProperties': False})]
 
-SCHEMAS = {name: spec for name, _, spec in TOOLS}
+TOOLS.append(('trace_calls',
+  'Bounded static caller/callee traversal from one discovered function. Direct call-site instruction '
+  'addresses are separate from pseudocode mappings. Indirect dispatch, budget cutoffs and unknown '
+  'relationships remain in frontier; this is not runtime tracing or proof of complete reachability.',
+  schema({'address': S,
+          'direction': {'type':'string','enum':['callers','callees']},
+          'max_depth': {'type':'integer','minimum':0,'maximum':8},
+          'max_nodes': {'type':'integer','minimum':1,'maximum':128},
+          'max_edges': {'type':'integer','minimum':1,'maximum':512},
+          'max_seconds': {'type':'integer','minimum':1,'maximum':30},
+          'per_node_edges': {'type':'integer','minimum':1,'maximum':128}}, ['address'])))
+
+APPLICATION_TOOLS = [
+ ('inventory_application',
+  'Inventory the selected application root without executing it. Bounded captured file metadata, '
+  'native components and Electron indicators; child symlinks are not followed. Page the returned '
+  'view with offset; partial inventory is not whole-application coverage.',
+  schema({'pattern': S, 'offset': {'type':'integer','minimum':0},
+          'limit': {'type':'integer','minimum':1,'maximum':200}, 'view': S})),
+ ('select_component',
+  'Explicitly select a native component id from this application inventory. Captures verified '
+  'bytes outside the bundle, closes the previous idle native owner and uses the ordinary full '
+  'analysis default. Subsequent native tools address only this selected component.',
+  schema({'component_id': S,
+          'architecture': {'type':'string','enum':['auto','arm64','arm64e','x86_64']},
+          'analysis_mode': {'type':'string','enum':['full','quick']}}, ['component_id'])),
+ ('inspect_javascript',
+  'Inspect a captured JavaScript component from the selected root. Narrow lexical direct-call '
+  'observations only: package entry, literal imports, preload/load targets and IPC channel sites. '
+  'Dynamic expressions, unparsed syntax and unsupported layouts remain explicit; co-location '
+  'or equal channel names do not prove a call or IPC connection.',
+  schema({'component_id': S, 'offset': {'type':'integer','minimum':0},
+          'limit': {'type':'integer','minimum':1,'maximum':200}, 'view': S}, ['component_id']))]
+
+SCHEMAS = {name: spec for name, _, spec in TOOLS + APPLICATION_TOOLS}
 
 def _validate(value, spec, path):
     if 'anyOf' in spec:

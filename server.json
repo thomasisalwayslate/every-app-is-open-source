@@ -8,12 +8,12 @@
     "source": "github"
   },
   "websiteUrl": "https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/docs/SETUP.md",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "packages": [
     {
       "registryType": "pypi",
       "identifier": "every-app-is-open-source",
-      "version": "0.1.8",
+      "version": "0.1.9",
       "runtimeHint": "uvx",
       "runtimeArguments": [
         {
@@ -34,7 +34,7 @@
           "type": "positional",
           "valueHint": "binary_path",
           "format": "filepath",
-          "description": "Absolute path to a native program. Analysis and evidence are saved beside it.",
+          "description": "Absolute path to a standalone native program. For application directories, configure the external --workspace as documented.",
           "isRequired": true
         }
       ],

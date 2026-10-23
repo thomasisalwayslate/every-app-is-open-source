@@ -1,0 +1,63 @@
+from types import SimpleNamespace
+import time
+import unittest
+from eaos.native_calls import provider
+
+class Flow:
+    def __init__(self,call=False,jump=False,computed=False):self.call,self.jump,self.computed=call,jump,computed
+    def isCall(self):return self.call
+    def isJump(self):return self.jump
+    def isComputed(self):return self.computed
+    def isConditional(self):return False
+
+class Body:
+    def contains(self,address):return '100'<=address<'200'
+
+class Fn:
+    def getEntryPoint(self):return '100'
+    def getBody(self):return Body()
+    def isExternal(self):return False
+
+class Instruction:
+    def __init__(self,address,flow,targets):self.address,self.flow,self.targets=address,flow,targets
+    def getAddress(self):return self.address
+    def getFlowType(self):return self.flow
+    def getFlows(self):return self.targets
+
+
+def backend(instructions,quick=False):
+    fn=Fn();mapping={i.address:i for i in instructions}
+    manager=SimpleNamespace(getFunctionContaining=lambda _:fn,getFunctionAt=lambda address:fn if address=='100' else None)
+    listing=SimpleNamespace(getInstructions=lambda *_:iter(instructions),getInstructionAt=lambda at:mapping.get(at))
+    refs=SimpleNamespace(getReferencesTo=lambda _:[SimpleNamespace(getFromAddress=lambda at=i.address:at) for i in instructions])
+    return SimpleNamespace(program=SimpleNamespace(getFunctionManager=lambda:manager,getListing=lambda:listing,getReferenceManager=lambda:refs),
+        monitor=None,address=lambda s:s,fn_info=lambda f:{'address':'100','name':'fixture'},
+        analysis_mode='quick' if quick else 'full',function_readiness={})
+
+class NativeCallProvider(unittest.TestCase):
+    def test_recursion_retained_but_internal_jumps_not_tail_calls(self):
+        items=[Instruction('104',Flow(call=True),['100']),Instruction('108',Flow(jump=True),['100'])]
+        for direction in ('callees','callers'):
+            result=provider(backend(items),time.monotonic()+1)('100',direction,8)
+            self.assertEqual(len(result['edges']),1)
+            self.assertEqual(result['edges'][0]['kind'],'direct_call')
+            self.assertEqual(result['edges'][0]['call_site'],'104')
+
+    def test_outgoing_branch_is_neutral_not_claimed_tail_call(self):
+        result=provider(backend([Instruction('104',Flow(jump=True),['300'])]),time.monotonic()+1)('100','callees',8)
+        self.assertEqual(result['edges'][0]['kind'],'direct_outgoing_jump')
+        self.assertFalse(result['edges'][0]['target_analyzed'])
+
+    def test_indirect_and_unprepared_body_remain_unresolved(self):
+        result=provider(backend([Instruction('104',Flow(call=True,computed=True),[])]),time.monotonic()+1)('100','callees',8)
+        self.assertEqual(result['edges'],[])
+        self.assertFalse(result['complete'])
+        self.assertIn('runtime dispatch',result['unresolved'][0]['reason'])
+        for quick in (False,True):
+            result=provider(backend([],quick),time.monotonic()+1)('100','callees',8)
+            self.assertFalse(result['complete'])
+            self.assertTrue(any('No recovered instructions' in r['reason'] for r in result['unresolved']))
+
+    def test_deadline_and_cancel_before_native_read(self):
+        with self.assertRaises(InterruptedError):provider(backend([]),time.monotonic()+1,lambda:True)('100','callees',8)
+        with self.assertRaises(TimeoutError):provider(backend([]),time.monotonic()-1)('100','callees',8)

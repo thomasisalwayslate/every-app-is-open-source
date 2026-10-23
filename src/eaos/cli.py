@@ -13,7 +13,7 @@ from .backend import Backend
 from .session import McpSession
 
 
-from .contracts import TOOLS, validate_arguments, validate_search_profile
+from .contracts import TOOLS, APPLICATION_TOOLS, validate_arguments, validate_search_profile
 from . import __version__
 
 
@@ -27,7 +27,8 @@ def protect_stdout():
 def serve(backend):
     from concurrent.futures import ThreadPoolExecutor
     import threading
-    catalog = [{'name':name,'description':description,'inputSchema':spec} for name,description,spec in TOOLS]
+    catalog = [{'name':name,'description':description,'inputSchema':spec}
+               for name,description,spec in getattr(type(backend),'tools',TOOLS)]
     allowed = {t['name'] for t in catalog}
     writer, guard = threading.Lock(), threading.Lock()
     pending = {}
@@ -138,10 +139,12 @@ def main():
     setup.add_argument('--archive-cache',type=Path,
                        help='Use an existing directory of checksum-verified runtime archives')
     server = sub.add_parser('mcp'); server.add_argument('binary')
-    call = sub.add_parser('call');call.add_argument('binary');call.add_argument('tool',choices=[t[0] for t in TOOLS]);call.add_argument('--args',default='{}')
+    call = sub.add_parser('call');call.add_argument('binary');call.add_argument('tool',choices=[t[0] for t in TOOLS+APPLICATION_TOOLS]);call.add_argument('--args',default='{}')
     for command in (server,call):
         command.add_argument('--architecture',choices=['auto','arm64','arm64e','x86_64'],default='auto')
         command.add_argument('--analysis-mode',choices=['full','quick'],default='full')
+        command.add_argument('--workspace',type=Path,
+                             help='Required for a selected application directory: capture/cache outside the original root and signed bundles')
         command.add_argument('--request-timeout',type=float,default=120,help='Native request deadline, seconds (0.05..7200)')
         command.add_argument('--analysis-timeout',type=float,default=3600,help='Initial analysis deadline, seconds (0.05..7200)')
     args = parser.parse_args()
@@ -161,10 +164,23 @@ def main():
             parser.exit(1, f'EAOS call failed: {exc}\n')
     protect_stdout()
     try:
-        backend = Backend(args.binary,architecture=args.architecture,analysis_mode=args.analysis_mode)
+        if Path(args.binary).expanduser().is_dir():
+            if args.workspace is None:
+                raise ValueError('Application roots require --workspace outside the selected root and signed bundles')
+            from .application_session import ApplicationSession
+            backend = None
+            session = ApplicationSession(args.binary,args.workspace,architecture=args.architecture,
+                analysis_mode=args.analysis_mode,request_timeout=args.request_timeout,
+                analysis_timeout=args.analysis_timeout)
+        else:
+            if args.workspace is not None:
+                raise ValueError('--workspace is for application directories; ordinary binary caches retain their existing location')
+            if args.command=='call' and args.tool in {tool[0] for tool in APPLICATION_TOOLS}:
+                raise ValueError('Application operations require a selected directory and --workspace')
+            backend = Backend(args.binary,architecture=args.architecture,analysis_mode=args.analysis_mode)
+            session = McpSession(backend,request_timeout=args.request_timeout,analysis_timeout=args.analysis_timeout)
     except (ValueError, FileNotFoundError) as exc:
         parser.exit(1, f'EAOS cannot open this program: {exc}\n')
-    session = McpSession(backend,request_timeout=args.request_timeout,analysis_timeout=args.analysis_timeout)
     previous_term = None
     if session is not None:
         previous_term = signal.signal(signal.SIGTERM,

@@ -51,7 +51,7 @@ You need an Apple Silicon Mac, [uv](https://docs.astral.sh/uv/) and Apple's Comm
 **1. Install.** This downloads checksum-pinned Java and Ghidra (about 770 MB) and builds Ghidra's Apple Silicon decompiler, which the official download doesn't include:
 
 ```sh
-uvx --python 3.13 --from every-app-is-open-source==0.1.8 eaos setup
+uvx --python 3.13 --from every-app-is-open-source==0.1.9 eaos setup
 ```
 
 Everything goes into `~/Library/Application Support/Every App Is Open Source/`. It doesn't touch your shell profile, your system Java or your agent's settings. Versions, sizes, troubleshooting and uninstall are in [SETUP.md](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/docs/SETUP.md).
@@ -66,7 +66,7 @@ __attribute__((noinline)) int quote(int n) { return n < 4 ? 19 : n * 7 + 3; }
 int main(int argc, char **argv) { puts("eaos fixture anchor"); return quote(argc); }
 C
 clang -O0 /tmp/eaos-example/example.c -o /tmp/eaos-example/example
-uvx --python 3.13 --from every-app-is-open-source==0.1.8 eaos call /tmp/eaos-example/example open_program
+uvx --python 3.13 --from every-app-is-open-source==0.1.9 eaos call /tmp/eaos-example/example open_program
 ```
 
 You should see `classification: computed`, an ARM64 language, a SHA-256 and an evidence ID.
@@ -74,7 +74,7 @@ You should see `classification: computed`, an ARM64 language, a SHA-256 and an e
 **3. Connect your agent.** For Claude Code:
 
 ```sh
-claude mcp add --transport stdio --scope local eaos -- uvx --python 3.13 --from every-app-is-open-source==0.1.8 eaos mcp /tmp/eaos-example/example
+claude mcp add --transport stdio --scope local eaos -- uvx --python 3.13 --from every-app-is-open-source==0.1.9 eaos mcp /tmp/eaos-example/example
 ```
 
 Codex and other MCP clients are in [CLIENTS.md](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/docs/CLIENTS.md).
@@ -85,11 +85,17 @@ Codex and other MCP clients are in [CLIENTS.md](https://github.com/thomasisalway
 
 The correct answer is **45**. This checks that your setup works; it doesn't prove the agent will understand any app. Addresses depend on the compiler, so yours will differ from the example above.
 
-For a real program, use the same `eaos mcp /absolute/path/to/program` command. To analyze a Mac app, [copy its executable out of the app bundle first](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/docs/SETUP.md#macos-app-bundles). For big programs, run `eaos call ... open_program` in the terminal and let the first analysis finish before you connect your agent.
+For a standalone program, use the same `eaos mcp /absolute/path/to/program` command. For an application directory, select its root with an explicit external workspace:
+
+```sh
+uvx --python 3.13 --from every-app-is-open-source==0.1.9 eaos mcp /Applications/Example.app --workspace /absolute/path/outside-bundles/eaos-workspace
+```
+
+Ask the agent to inventory the root, select one native component by its returned ID, then inspect that component. Full native analysis remains the default; quick mode is opt-in. Individual executable paths inside bundles are still refused; [copy the executable out](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/docs/SETUP.md#macos-app-bundles) for standalone analysis. For big standalone programs, terminal pre-analysis can finish before you connect your agent.
 
 ## The tools
 
-I counted every tool call agents made across 24 earlier test runs and built only what they actually used.
+I started with seven tools based on the calls agents made across 24 earlier test runs. Native-file sessions now expose **eight**, including bounded static call traversal. Application-directory sessions expose **eleven**, adding inventory, explicit component selection and initial JavaScript inspection.
 
 | Tool | What it does |
 |---|---|
@@ -100,6 +106,17 @@ I counted every tool call agents made across 24 earlier test runs and built only
 | `calculate` | Safe arithmetic and byte decoding, so the agent doesn't do math in its head |
 | `decode_swift_string` | Recover text hidden inside Swift code on Apple platforms |
 | `read_evidence` | Pull up the full saved evidence behind any reply, hash-checked |
+| `trace_calls` | Follow bounded static caller/callee relationships, retaining indirect edges and cutoffs as unresolved |
+
+Application-directory sessions also expose:
+
+| Tool | What it does |
+|---|---|
+| `inventory_application` | Inventory a selected root and supported ASAR members, with explicit gaps and budgets |
+| `select_component` | Capture and select one inventoried native component outside the original bundle |
+| `inspect_javascript` | Observe supported literal imports, preload properties and call spellings in bounded UTF-8 source |
+
+This is initial, partial JavaScript/ASAR inspection. In local checks on official Electron Fiddle 0.39.0, inventory, preload inspection and native launcher analysis worked; its main and renderer bundles exceeded the **1 MiB** inspection cap. No IPC graph was established. A separate bounded Ghostty trace did not establish the complete Swift/C/Zig reload chain. These checks do not establish full Electron support, reconstructed applications, comparative performance or reliable agent answers.
 
 The exact inputs, outputs and limits of each one are in the [tool contract](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/docs/TOOL-CONTRACT.md).
 
@@ -117,7 +134,7 @@ These labels describe the tool results, not your agent's final answer. An agent 
 
 ## Analyze once, reuse it
 
-Ghidra's analysis is slow, so each program gets its own `eaos-analysis/<sha256>/` folder right next to it, with the analyzed project and every piece of evidence. Opening the same program again reuses all of it. Projects made before 0.1.7 are kept but not reused: 0.1.7 analyzes the program again in its new cache format.
+Ghidra's analysis is slow, so each standalone program gets its own `eaos-analysis/<sha256>/` folder right next to it, with the analyzed project and evidence. Reopening a compatible current-version profile reuses it; different engine, architecture or analysis profiles can require fresh analysis. Application-directory captures and native caches go into the explicit external workspace. Projects made before 0.1.7 are kept but not reused: 0.1.7 analyzes the program again in its new cache format.
 
 Each session works on a read-only copy of the exact bytes it hashed, so changing the original file doesn't affect a session that's already open. If a cached project doesn't match the program's hash, it stops instead of guessing, and it never deletes old evidence.
 
@@ -144,11 +161,11 @@ The private targets and answer keys mean you can't replay my exact comparisons. 
 
 ## What's next
 
-Right now it handles compiled programs on Apple Silicon Macs. I'd like it to inspect more kinds of software, but there's no fixed order or schedule: new support follows a demonstrated need and reproducible tests, and each one gets its own benchmark before I claim anything.
+Right now it analyzes native programs on Apple Silicon Macs, with selected-root inventory and initial partial JavaScript/ASAR inspection. I'd like it to inspect more kinds of software, but there's no fixed order or schedule: new support follows a demonstrated need and reproducible tests, and each one gets its own benchmark before I claim anything.
 
 ## Security
 
-The tools only expose the program you selected and its evidence. There's no general file-reading or shell tool. The Python and Java processes aren't sandboxed by the OS, though: they run with your user's permissions, and text recovered from a binary is untrusted. Read the [security model](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/SECURITY.md) before you analyze anything you don't trust.
+The tools expose the selected program, or the explicitly selected application root and component, plus their generated evidence. There's no general file-reading or shell tool. The Python and Java processes aren't sandboxed by the OS, though: they run with your user's permissions, and text recovered from a binary is untrusted. Read the [security model](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/SECURITY.md) before you analyze anything you don't trust.
 
 Found a vulnerability? [Report it privately](https://github.com/thomasisalwayslate/every-app-is-open-source/security/advisories/new), not in a public issue.
 
@@ -166,7 +183,7 @@ What gets tested where:
 |---|---|
 | Unit, failure-case and packaging tests | CI on Ubuntu, every push |
 | Installed-wheel CLI smoke test | CI on Ubuntu, every push |
-| Native checks with real Ghidra on Apple Silicon (10 tests) | Locally on a configured Mac before each release; skipped in CI |
+| Native checks with real Ghidra on Apple Silicon (12 tests) | Locally on a configured Mac before each release; skipped in CI |
 
 The green CI badge covers the first two rows only. To run the native checks after `eaos setup` or `./install.sh`:
 

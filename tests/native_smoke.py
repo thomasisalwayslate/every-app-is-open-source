@@ -41,7 +41,7 @@ def check(command, target, report, expected_version):
             if actual_version != expected_version:
                 raise RuntimeError(f'Expected EAOS {expected_version}, got {actual_version}')
             catalog = request('tools/list')['tools']
-            assert len(catalog) == 7
+            assert len(catalog) == 8
             opened = tool('open_program')
             deadline = time.monotonic() + 180
             while 'analysis' in opened['data']:
@@ -65,6 +65,8 @@ def check(command, target, report, expected_version):
             words = [int.from_bytes(raw[:8], 'little'), int.from_bytes(raw[8:], 'little')]
             assert tool('decode_swift_string', {'words': words})['data']['text'] == 'hello'
             assert tool('read_evidence', {'id': inspected['evidence']['id']})['text']
+            traced = tool('trace_calls', {'address':address,'max_depth':1,'max_nodes':4,'max_edges':8})
+            assert traced['classification'] == 'computed' and traced['data']['start'] == address
             assert tool('open_program')['data']['analysis_count'] == opened['data']['analysis_count']
             # Inspect an invalid result directly: the request wrapper rejects isError.
             sequence += 1
@@ -77,7 +79,7 @@ def check(command, target, report, expected_version):
                       'tools': [item['name'] for item in catalog], 'calls': calls,
                       'invalid_boolean_rejected': True, 'target_executed': False}
             report.write_text(json.dumps(output, indent=2) + '\n')
-            print('PASS: installed wheel, seven MCP tools, example logic, evidence links, cache reuse and invalid boolean rejection.')
+            print('PASS: installed wheel, eight MCP tools, example logic, bounded trace, evidence links, cache reuse and invalid boolean rejection.')
         finally:
             process.stdin.close()
             try:

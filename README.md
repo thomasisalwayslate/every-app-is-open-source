@@ -14,47 +14,78 @@
 
 Give your AI agent a compiled program, and it works out how it's built. Ghidra does the decompiling. This is the agent's side of it: a small set of MCP tools, short answers by default, and evidence you can trace back to the binary.
 
-**Benchmarked against [REA](https://github.com/morluto/rea) and GhidraMCP on real programs: same answers, for less cost and less time.** Every run, number and limitation is in [BENCHMARKS.md](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/BENCHMARKS.md).
-
 The name is a provocation, not a license. Seeing how an app works doesn't give you the right to copy it. Read the [disclaimer](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/DISCLAIMER.md).
 
 <!-- mcp-name: io.github.thomasisalwayslate/every-app-is-open-source -->
 
-## Install
+## What it looks like
 
-You need an Apple Silicon Mac, [uv](https://docs.astral.sh/uv/) and Apple's Command Line Tools (`xcode-select --install`).
+An agent connected only to EAOS was given a small compiled program and asked what `quote(6)` returns. These are its actual tool calls:
+
+| Tool call | What came back |
+|---|---|
+| `search {"kind":"functions","pattern":"quote"}` | `_quote` at `0x100000460` |
+| `inspect {"addresses":["100000460"],"mode":"all"}` | Assembly and decompiled code, saved as evidence `fe8589bb…` |
+| `read_evidence {"id":"fe8589bb…"}` | The saved evidence, hash-checked |
+
+Its answer: **45**. Below 4 the function returns 19, otherwise `7*n + 3`, citing the address and the evidence ID.
+
+This is one recorded session on version 0.1.1 with an already-analyzed cache, not a benchmark. The [full transcript](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/docs/DEMO.md) has every call and its limits.
+
+## How it compares
+
+I've compared it with [REA](https://github.com/morluto/rea) and GhidraMCP on three modified programs, with the same model and questions for each tool. The results depend on the target, and EAOS doesn't win every time:
+
+| Target | EAOS version | vs GhidraMCP | vs REA |
+|---|---|---|---|
+| Modified Doom | 0.1.0 | 16% cheaper, 17% faster; all 18/18 correct | 36% cheaper, 27% faster; all 18/18 correct |
+| Modified Ollama | 0.1.4 | **28% more expensive, 23% slower**; GhidraMCP missed 3 of 195 cases | 14% cheaper, 17% faster; both 195/195 |
+| Modified Ollama, round 2 | 0.1.5 | 6% cheaper, similar time | 25% cheaper, similar time |
+
+Costs are API-equivalent model costs; timings exclude initial analysis. Each row is three runs per tool, so these are descriptive results, not a general ranking. In round 2 the other tools' missed cases were mostly header order and incomplete error text, not wrong behavior. The modified programs and answer keys are private so the tests can't be spoiled. That means you can read every run summary, scoring review and protocol, but you can't replay these exact comparisons yourself. Every number, loss and limitation is in [BENCHMARKS.md](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/BENCHMARKS.md).
+
+## Get your first result
+
+You need an Apple Silicon Mac, [uv](https://docs.astral.sh/uv/) and Apple's Command Line Tools (`xcode-select --install`). Windows, Linux and Intel Macs aren't supported yet.
+
+**1. Install.** This downloads checksum-pinned Java and Ghidra (about 770 MB) and builds Ghidra's Apple Silicon decompiler, which the official download doesn't include:
 
 ```sh
-uvx --python 3.13 --from every-app-is-open-source eaos setup
+uvx --python 3.13 --from every-app-is-open-source==0.1.8 eaos setup
 ```
 
-That downloads checksum-pinned Java and Ghidra and builds Ghidra's Apple Silicon decompiler, which the official download doesn't include. Everything goes into `~/Library/Application Support/Every App Is Open Source/`. It doesn't touch your shell profile, your system Java or your agent's settings. The exact versions, download sizes, troubleshooting and uninstall steps are in [SETUP.md](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/docs/SETUP.md).
+Everything goes into `~/Library/Application Support/Every App Is Open Source/`. It doesn't touch your shell profile, your system Java or your agent's settings. Versions, sizes, troubleshooting and uninstall are in [SETUP.md](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/docs/SETUP.md).
 
-Windows, Linux and Intel Macs aren't supported yet.
-
-## Connect your agent
-
-Point it at one program:
+**2. Build a tiny test program and analyze it:**
 
 ```sh
-uvx --python 3.13 --from every-app-is-open-source eaos mcp /absolute/path/to/program
+mkdir -p /tmp/eaos-example
+cat > /tmp/eaos-example/example.c <<'C'
+#include <stdio.h>
+__attribute__((noinline)) int quote(int n) { return n < 4 ? 19 : n * 7 + 3; }
+int main(int argc, char **argv) { puts("eaos fixture anchor"); return quote(argc); }
+C
+clang -O0 /tmp/eaos-example/example.c -o /tmp/eaos-example/example
+uvx --python 3.13 --from every-app-is-open-source==0.1.8 eaos call /tmp/eaos-example/example open_program
 ```
 
-Setup for Claude Code, Codex and any other MCP client is in [CLIENTS.md](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/docs/CLIENTS.md). You can also call a single tool from the terminal:
+You should see `classification: computed`, an ARM64 language, a SHA-256 and an evidence ID.
+
+**3. Connect your agent.** For Claude Code:
 
 ```sh
-uvx --python 3.13 --from every-app-is-open-source eaos call /absolute/path/to/program open_program
+claude mcp add --transport stdio --scope local eaos -- uvx --python 3.13 --from every-app-is-open-source==0.1.8 eaos mcp /tmp/eaos-example/example
 ```
 
-To analyze a Mac app, [copy its executable out of the app bundle first](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/docs/SETUP.md#macos-app-bundles). For big programs, let the first analysis finish in the terminal before you connect your agent.
+Codex and other MCP clients are in [CLIENTS.md](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/docs/CLIENTS.md).
 
-## Try it on something small
+**4. Ask:**
 
-The repo includes a [tiny C program](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/tests/fixture.c) with a function called `quote`. Compile it, connect your agent, and ask:
+> Find the quote function. What does quote(6) return? Explain both branches and cite the function address and saved evidence.
 
-> What does quote(6) return? Explain both branches and show the function address and evidence.
+The correct answer is **45**. This checks that your setup works; it doesn't prove the agent will understand any app. Addresses depend on the compiler, so yours will differ from the example above.
 
-The answer is **45**: below 4 it returns 19, otherwise `7*n + 3`. The [step-by-step version](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/docs/SETUP.md#first-result) walks you through it, and there's a [full transcript of a real agent session](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/docs/DEMO.md) if you want to see every tool call first.
+For a real program, use the same `eaos mcp /absolute/path/to/program` command. To analyze a Mac app, [copy its executable out of the app bundle first](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/docs/SETUP.md#macos-app-bundles). For big programs, run `eaos call ... open_program` in the terminal and let the first analysis finish before you connect your agent.
 
 ## The tools
 
@@ -72,35 +103,35 @@ I counted every tool call agents made across 24 earlier test runs and built only
 
 The exact inputs, outputs and limits of each one are in the [tool contract](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/docs/TOOL-CONTRACT.md).
 
-## Never "exact" for a guess
+## Every tool result says what it is
 
-Every answer says what it is:
+Each tool result is labelled:
 
 - **fact**: read straight from the binary
 - **computed**: worked out from it, like decompiled code or a decoded string
-- **guess**: an interpretation with nothing solid behind it
+- **guess**: an inference that hasn't been verified
 
-Decompiled code is computed, not the original source. When a tool fails, it says so.
+Decompiled code is computed, not the original source. Successful analysis results include saved evidence you can pull up with `read_evidence`. Status responses and errors don't include evidence IDs; a tool failure makes no analysis claim.
 
-I care about this because of what I found in REA: a [Map lookup labelled as a network endpoint](https://github.com/morluto/rea/issues/4853) and a [local class labelled as SQLite storage](https://github.com/morluto/rea/issues/4854), both marked "observed, exact". Both are fixed in REA now.
+These labels describe the tool results, not your agent's final answer. An agent can still misread correctly labelled evidence. The labels and evidence IDs let you check a conclusion; they don't certify it.
 
 ## Analyze once, reuse it
 
-Ghidra's analysis is slow, so each program gets its own `eaos-analysis/<sha256>/` folder right next to it, with the analyzed project and every piece of evidence. Opening the same program again reuses all of it.
+Ghidra's analysis is slow, so each program gets its own `eaos-analysis/<sha256>/` folder right next to it, with the analyzed project and every piece of evidence. Opening the same program again reuses all of it. Projects made before 0.1.7 are kept but not reused: 0.1.7 analyzes the program again in its new cache format.
 
 Each session works on a read-only copy of the exact bytes it hashed, so changing the original file doesn't affect a session that's already open. If a cached project doesn't match the program's hash, it stops instead of guessing, and it never deletes old evidence.
 
 One Ghidra quirk: it won't create projects inside a folder whose name starts with a dot, like `.cache`. Keep the program you're analyzing out of those.
 
-## 0.1.7 analysis options
+## Analysis options
 
-Version **0.1.7 is released**. Full analysis remains the default. The CLI and MCP server accept `--analysis-mode quick` for partial metadata and requested-function preparation, and `--architecture arm64` for an explicit Mach-O slice. Quick function search offers explicit bounded index continuation, separately from view-bound result pagination. Quick mode is limited to 64-bit ARM/x86 Mach-O; it does not recover every Swift name or prove missing references are absent. No new speed or accuracy comparison has been run.
+Full analysis is the default. The CLI and MCP server accept `--analysis-mode quick` for partial metadata and requested-function preparation, and `--architecture arm64` for an explicit Mach-O slice. Quick function search offers explicit bounded index continuation, separately from view-bound result pagination. Quick mode is limited to 64-bit ARM/x86 Mach-O; it does not recover every Swift name or prove missing references are absent. No new speed or accuracy comparison has been run.
 
-On Apple Silicon, compatible universal inputs select ARM64 automatically. Each captured whole-file hash retains separate architecture/profile/engine caches under `profiles/`, with shared immutable evidence. Legacy projects are preserved; the new cache format does not reuse them. Status remains available during native operations, with configurable deadlines and cancellation. See [setup](docs/SETUP.md#017-analysis-options) and the [tool contract](docs/TOOL-CONTRACT.md#017-analysis-profiles-and-identity) before using these options.
+On Apple Silicon, compatible universal inputs select ARM64 automatically. Each captured whole-file hash retains separate architecture/profile/engine caches under `profiles/`, with shared immutable evidence. Legacy projects are preserved; the new cache format does not reuse them. Status remains available during native operations, with configurable deadlines and cancellation. See [setup](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/docs/SETUP.md#017-analysis-options) and the [tool contract](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/docs/TOOL-CONTRACT.md#017-analysis-profiles-and-identity) before using these options.
 
-## Benchmarks
+## How the benchmarks are run
 
-I test it against REA and GhidraMCP whenever I point it at something new. The results live in [BENCHMARKS.md](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/BENCHMARKS.md), one row per target, each linked to every run and answer.
+The summary is [above](#how-it-compares); the details live in [BENCHMARKS.md](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/BENCHMARKS.md), one row per target, each linked to its run summaries and scoring.
 
 The rules stay the same every time:
 - **Same model, fresh sessions, three runs per tool.**
@@ -109,7 +140,7 @@ The rules stay the same every time:
 - **REA runs the way people actually install it,** with its bundled skill and its full tool catalog.
 - **Everything is kept,** including rounds I lost.
 
-Want to check my work? [Run your own](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/docs/BENCHMARK.md).
+The private targets and answer keys mean you can't replay my exact comparisons. You can run the same method on your own target with the [benchmark guide](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/docs/BENCHMARK.md).
 
 ## What's next
 
@@ -127,6 +158,20 @@ Found a vulnerability? [Report it privately](https://github.com/thomasisalwaysla
 uv build
 PYTHONPATH=src uv run --no-project --python 3.13 python -m unittest discover -s tests -v
 python3 scripts/check_distribution.py dist
+```
+
+What gets tested where:
+
+| Check | Where it runs |
+|---|---|
+| Unit, failure-case and packaging tests | CI on Ubuntu, every push |
+| Installed-wheel CLI smoke test | CI on Ubuntu, every push |
+| Native checks with real Ghidra on Apple Silicon (10 tests) | Locally on a configured Mac before each release; skipped in CI |
+
+The green CI badge covers the first two rows only. To run the native checks after `eaos setup` or `./install.sh`:
+
+```sh
+EAOS_NATIVE_TESTS=1 uv run python -m unittest discover -s tests -v
 ```
 
 To work from a checkout instead of PyPI, `./install.sh` sets up everything locally, then `./eaos mcp /absolute/path/to/program` starts the server.

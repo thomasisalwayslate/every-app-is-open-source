@@ -26,11 +26,25 @@ class ProgramBusyError(RuntimeError):
     """Another EAOS process currently owns this program's analysis lock."""
 
 
+BUNDLE_SUFFIXES = {'.app', '.appex', '.framework', '.bundle', '.xpc', '.plugin', '.kext'}
+
+
+def _reject_bundle_target(target: Path):
+    """Refuse before writing: the cache beside a bundled executable would land inside the signed bundle."""
+    bundle = next((parent for parent in target.parents if parent.suffix.lower() in BUNDLE_SUFFIXES), None)
+    if bundle is not None:
+        raise ValueError(
+            f'{target} is inside the bundle {bundle}; EAOS would write its analysis cache there. '
+            'Copy the executable to a new ordinary writable folder outside the bundle, '
+            'then open that copy with EAOS.')
+
+
 class Backend:
     def __init__(self, target: str, architecture='auto', analysis_mode='full'):
         self.target = Path(target).expanduser().resolve(strict=True)
         if not self.target.is_file():
             raise ValueError("Target must be a regular file")
+        _reject_bundle_target(self.target)
         analysis_root = self.target.parent / 'eaos-analysis'
         analysis_root.mkdir(exist_ok=True)
         # Hash the bytes that Ghidra will actually import, not a path read later.

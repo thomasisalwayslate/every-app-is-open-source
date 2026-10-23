@@ -6,6 +6,7 @@ from unittest.mock import Mock, patch
 from types import SimpleNamespace
 
 from eaos.quick import walk
+from eaos import quick
 from eaos import function_discovery
 from eaos.evidence import Evidence
 from eaos.backend import Backend
@@ -300,6 +301,23 @@ class CandidateCoverage(unittest.TestCase):
         self.assertIsNone(self.backend.discovery_index)
         with self.assertRaisesRegex(ValueError,'quick profile'):
             self.backend.search(kind='functions',index_cursor='not-a-token')
+
+
+class LiteralScope(unittest.TestCase):
+    def test_only_initialized_read_only_non_executable_blocks_are_indexed(self):
+        def block(start,write=False,execute=False,initialized=True,size=4):
+            fake=Mock()
+            fake.getSize.return_value=size;fake.getStart.return_value.getOffset.return_value=start
+            fake.isInitialized.return_value=initialized;fake.isRead.return_value=True
+            fake.isWrite.return_value=write;fake.isExecute.return_value=execute
+            return fake
+        backend=Mock()
+        backend.program.getMemory.return_value.getBlocks.return_value=[
+            block(0x10),block(0x20,write=True),block(0x30,execute=True),block(0x40,initialized=False),block(0x50)]
+        backend._block_bytes.side_effect=lambda fake,limit:b'abcd'
+        with patch('eaos.quick.MAX_LITERAL_BYTES',8):
+            selected=quick.literal_blocks(backend)
+        self.assertEqual([start for start,_ in selected],[0x10,0x50])
 
 
 class BoundedFlow(unittest.TestCase):

@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640">
+<title>Every App Is Open Source — seven tools, traceable evidence</title>
+<desc>Ghidra-powered MCP server for AI agents, benchmarked against REA and GhidraMCP. Results vary by target. Wins, losses and limitations are documented in BENCHMARKS.md; the modified targets and detailed transcripts remain private.</desc>
+<defs><pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse"><path d="M32 0H0V32" fill="none" stroke="#26282a" stroke-width="1"/></pattern></defs>
+<rect width="1280" height="640" fill="#111314"/><rect width="1280" height="640" fill="url(#grid)"/>
+<rect x="48" y="48" width="1184" height="544" rx="20" fill="#111314" stroke="#3c4144"/>
+<g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">
+<text x="88" y="111" fill="#a2b3ad" font-size="19" font-weight="600" letter-spacing="2">GHIDRA + AI AGENTS · 7 MCP TOOLS</text>
+<text x="84" y="194" fill="#fafaf5" font-size="62" font-weight="500" letter-spacing="-2">Every App Is</text>
+<text x="84" y="267" fill="#b5f3cb" font-size="62" font-weight="500" letter-spacing="-2">Open Source</text>
+<text x="88" y="320" fill="#b5bcb9" font-size="23">Inspect compiled programs.</text>
+<text x="88" y="353" fill="#b5bcb9" font-size="23">Keep the evidence. Skip the noise.</text>
+<path d="M88 393h1104" stroke="#343a37"/>
+<text x="88" y="433" fill="#a2b3ad" font-size="18">BENCHMARKED AGAINST REA AND GHIDRAMCP</text>
+<text x="88" y="491" fill="#fafaf5" font-size="36" font-weight="500">Wins.</text>
+<text x="432" y="491" fill="#b5f3cb" font-size="36" font-weight="500">Losses.</text>
+<text x="762" y="491" fill="#b5f3cb" font-size="36" font-weight="500">Traceable evidence.</text>
+<text x="88" y="552" fill="#959e99" font-size="18">Numbers for every target and version in BENCHMARKS.md</text>
+</g>
+<g transform="translate(767 144)" fill="none" stroke="#7c9d89" stroke-width="3" stroke-linejoin="miter">
+<path d="M0 0h392v199H0zM116 53h160v82H116zM0 0l116 53M392 0 276 53M0 199l116-64m276 64-116-64M0 80l116 8m276-8-116 8M0 143l116-29m276 29-116-29M61 28v143m270-143v143"/>
+<path d="M148 135V52h96v83m-78 0V70h60v65M116 135 58 199m218-64 58 64M93 167h206M196 135v64"/>
+<path fill="#b5f3cb" stroke="none" d="M180 82h6v8h20v-8h6v18h-6v8h10v6h8v19h-6v-11h-8v18h-9v-10h-10v10h-9v-18h-8v11h-6v-19h8v-6h10v-8h-6z"/>
+<path stroke="#111314" d="M186 96h5m10 0h5m-14 9h9"/>
+<path fill="#111314" stroke="#b5f3cb" d="M171 199v-24h9v-17h5v-14h22v14h5v17h9v24m-34-51h16m-19 28h24m-30 10h36"/>
+</g>
+</svg>

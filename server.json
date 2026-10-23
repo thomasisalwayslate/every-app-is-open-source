@@ -8,12 +8,12 @@
     "source": "github"
   },
   "websiteUrl": "https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/docs/SETUP.md",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "packages": [
     {
       "registryType": "pypi",
       "identifier": "every-app-is-open-source",
-      "version": "0.1.7",
+      "version": "0.1.8",
       "runtimeHint": "uvx",
       "runtimeArguments": [
         {

@@ -160,7 +160,10 @@ def main():
         except (ValueError, TypeError) as exc:
             parser.exit(1, f'EAOS call failed: {exc}\n')
     protect_stdout()
-    backend = Backend(args.binary,architecture=args.architecture,analysis_mode=args.analysis_mode)
+    try:
+        backend = Backend(args.binary,architecture=args.architecture,analysis_mode=args.analysis_mode)
+    except (ValueError, FileNotFoundError) as exc:
+        parser.exit(1, f'EAOS cannot open this program: {exc}\n')
     session = McpSession(backend,request_timeout=args.request_timeout,analysis_timeout=args.analysis_timeout)
     previous_term = None
     if session is not None:

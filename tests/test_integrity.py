@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import Mock, patch
@@ -34,6 +35,49 @@ class InputIntegrity(unittest.TestCase):
                 Backend(str(target))
             self.assertEqual(first.snapshot.read_bytes(), b'changed')
             first.close()
+
+    def test_bundled_executable_is_refused_before_any_write(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            for bundle in ['Example.app', 'Helper.framework', 'Widget.APPEX']:
+                macos = Path(tmp) / bundle / 'Contents' / 'MacOS'
+                macos.mkdir(parents=True)
+                target = macos / 'Example'
+                target.write_bytes(b'never executed')
+                linked = Path(tmp) / ('link-' + bundle)
+                linked.symlink_to(target)
+                for path in (target, linked):
+                    with self.assertRaisesRegex(ValueError, 'inside the bundle.*Copy the executable'):
+                        Backend(str(path))
+                self.assertEqual(sorted(p.name for p in macos.iterdir()), ['Example'])
+                self.assertEqual(target.read_bytes(), b'never executed')
+
+    def test_bundle_cli_refusal_handles_shell_metacharacters_without_command_advice(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp) / 'Example "quoted" $(printf unsafe) `whoami`.app' / 'Contents' / 'MacOS'
+            folder.mkdir(parents=True)
+            target = folder / 'Example'
+            target.write_bytes(b'never executed')
+            result = subprocess.run(
+                [sys.executable, '-m', 'eaos.cli', 'call', str(target), 'open_program'],
+                capture_output=True, text=True, check=False, timeout=10)
+            self.assertEqual(result.returncode, 1)
+            self.assertEqual(result.stdout, '')
+            self.assertNotIn('Traceback', result.stderr)
+            self.assertIn(str(target.resolve()), result.stderr)
+            self.assertIn('then open that copy with EAOS', result.stderr)
+            self.assertNotIn('mkdir ', result.stderr)
+            self.assertNotIn('cp ', result.stderr)
+            self.assertEqual(list(folder.iterdir()), [target])
+            self.assertEqual(target.read_bytes(), b'never executed')
+
+    def test_ordinary_folder_named_like_contents_is_still_accepted(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp) / 'apps' / 'Contents' / 'MacOS'
+            folder.mkdir(parents=True)
+            target = folder / 'Example'
+            target.write_bytes(b'bytes')
+            Backend(str(target)).close()
+            self.assertTrue((folder / 'eaos-analysis').is_dir())
 
     def test_failed_native_load_releases_lock(self):
         with tempfile.TemporaryDirectory() as tmp:

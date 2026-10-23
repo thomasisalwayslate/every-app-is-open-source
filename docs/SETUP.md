@@ -5,10 +5,10 @@ Supported: Apple Silicon macOS, Python 3.13 (uv selects it), uv, and Apple's Com
 Install the package and prepare its native runtimes:
 
 ```sh
-uvx --python 3.13 --from every-app-is-open-source==0.1.6 eaos setup
+uvx --python 3.13 --from every-app-is-open-source==0.1.7 eaos setup
 ```
 
-To test a reviewed local wheel instead, use `uvx --python 3.13 --from /absolute/path/to/every_app_is_open_source-0.1.6-py3-none-any.whl eaos setup`.
+To test a reviewed local wheel instead, use `uvx --python 3.13 --from /absolute/path/to/every_app_is_open_source-0.1.7-py3-none-any.whl eaos setup`.
 
 ## What setup runs and downloads
 
@@ -50,7 +50,7 @@ Keep the copy and its adjacent evidence directory together. A universal Mach-O c
 
 ```sh
 lipo "$eaos_case/Example" -thin arm64 -output "$eaos_case/Example-arm64"
-uvx --python 3.13 --from every-app-is-open-source==0.1.6 eaos call "$eaos_case/Example-arm64" open_program
+uvx --python 3.13 --from every-app-is-open-source==0.1.7 eaos call "$eaos_case/Example-arm64" open_program
 ```
 
 If the executable is already a single architecture, use that copy directly. `arm64e` is a separate architecture name; this example does not establish support for it. An app's main executable may depend on frameworks and resources that are separate analysis targets.
@@ -63,13 +63,13 @@ Run the 0.1.2 setup command once after upgrading, using the same `EAOS_RUNTIME_D
 
 Completed analyses are reused. A C++ program analyzed before the helpers were available keeps its old recovered names. To re-analyze it with the new helpers, first close every EAOS session using that program, then **move and preserve** its specific `eaos-analysis/<sha256>/` directory elsewhere. Reopen the copied program to create a new analysis. Keep the previous project and evidence if they are still useful; an interrupted analysis starts over rather than resuming reliably.
 
-## Local 0.1.7 development options
+## 0.1.7 analysis options
 
-This section describes unreleased source changes, **not the current PyPI package**. Use the existing checkout environment after its runtimes have been prepared:
+Version 0.1.7 supports these options after setup. The published package can run either profile:
 
 ```sh
-PYTHONPATH=src EAOS_RUNTIME_DIR="$PWD/.tools" .venv/bin/python -m eaos.cli call /absolute/path/to/program open_program --architecture arm64 --analysis-mode quick
-PYTHONPATH=src EAOS_RUNTIME_DIR="$PWD/.tools" .venv/bin/python -m eaos.cli mcp /absolute/path/to/program --analysis-mode quick
+uvx --python 3.13 --from every-app-is-open-source==0.1.7 eaos call /absolute/path/to/program open_program --architecture arm64 --analysis-mode quick
+uvx --python 3.13 --from every-app-is-open-source==0.1.7 eaos mcp /absolute/path/to/program --analysis-mode quick
 ```
 
 Full analysis remains the default. Quick mode supports 64-bit ARM/x86 Mach-O. It imports the selected image, recovers available Objective-C metadata and loader-provided names, and searches bounded literal bytes. It does not run whole-program analysis or recover every Swift name. Individual inspections prepare bounded reachable instructions; unresolved indirect jumps, tail edges or unsafe boundaries can leave assembly only or refuse the request. Every affected response reports coverage; missing matches/references do not prove absence.
@@ -80,11 +80,11 @@ New projects live under `eaos-analysis/<whole-file-sha256>/profiles/<identity>/`
 
 Quick function discovery starts with a bounded prefix. When `search(kind="functions")` reports `coverage.function_candidates.next_index_cursor`, pass that value back as `index_cursor` to request exactly one additional bounded batch (same 50,000-candidate/two-second iteration budget, plus an 8 MiB batch payload limit). Each batch commits atomically in the current profile's derived `function-index-v1.sqlite`; completed progress survives reopening. The index has a 256 MiB payload budget plus SQLite overhead, and reports if it cannot continue. Ordinary searches and result pagination do not grow it.
 
-Use `next_offset` **with `view`** to page the same query's current results. Index expansion changes the view, requires offset zero, and rejects old page/index cursors. Expansion returns cumulative matches, so restart paging deliberately; no old offset silently skips or repeats rows. After cancellation or a stale cursor, restart with offset zero and no cursors to obtain current progress. A complete candidate index still does not mean complete symbol recovery or analysis. See the [continuation contract](TOOL-CONTRACT.md#bounded-function-discovery-continuation-local-unreleased) for limits, cursor identity and failure recovery.
+Use `next_offset` **with `view`** to page the same query's current results. Index expansion changes the view, requires offset zero, and rejects old page/index cursors. Expansion returns cumulative matches, so restart paging deliberately; no old offset silently skips or repeats rows. After cancellation or a stale cursor, restart with offset zero and no cursors to obtain current progress. A complete candidate index still does not mean complete symbol recovery or analysis. See the [continuation contract](TOOL-CONTRACT.md#bounded-function-discovery-continuation) for limits, cursor identity and failure recovery.
 
 In MCP, `open_program` with `{"analysis_mode":"full"}` explicitly opens the separate full-analysis profile. It does not promote a partial cache or erase previous evidence. `full=true` still controls output detail only. The same choice is available to terminal calls with `--analysis-mode full`.
 
-Local CLI/MCP defaults are a 3,600-second initialization deadline and a 120-second native-operation deadline. Set `--analysis-timeout` and `--request-timeout` in seconds (0.05–7,200). MCP status and ping remain available while native work runs. `open_program` with `{"cancel":true}`, a matching MCP cancellation notification or client shutdown stops owned work. A cancelled/deadline-expired session must be restarted; interrupted work has no resume guarantee. Objective-C metadata has a 30-second budget, requested-function preparation 15 seconds, and decompilation 20 seconds in quick mode / 60 in full mode. A live process and elapsed time still provide no percentage or ETA.
+CLI/MCP defaults are a 3,600-second initialization deadline and a 120-second native-operation deadline. Set `--analysis-timeout` and `--request-timeout` in seconds (0.05–7,200). MCP status and ping remain available while native work runs. `open_program` with `{"cancel":true}`, a matching MCP cancellation notification or client shutdown stops owned work. A cancelled/deadline-expired session must be restarted; interrupted work has no resume guarantee. Objective-C metadata has a 30-second budget, requested-function preparation 15 seconds, and decompilation 20 seconds in quick mode / 60 in full mode. A live process and elapsed time still provide no percentage or ETA.
 
 ## First result
 
@@ -98,7 +98,7 @@ __attribute__((noinline)) int quote(int n) { return n < 4 ? 19 : n * 7 + 3; }
 int main(int argc, char **argv) { puts("eaos fixture anchor"); return quote(argc); }
 C
 clang -O0 /tmp/eaos-example/example.c -o /tmp/eaos-example/example
-uvx --python 3.13 --from every-app-is-open-source==0.1.6 eaos call /tmp/eaos-example/example open_program
+uvx --python 3.13 --from every-app-is-open-source==0.1.7 eaos call /tmp/eaos-example/example open_program
 ```
 
 Expect `classification: computed`, an ARM64 language, a SHA-256, a positive function count and an evidence ID/file URI. Addresses vary by compiler; never copy an address from somebody else's run.
@@ -117,7 +117,7 @@ Expected: **45**, computed from the recovered logic. For n below 4 it returns **
 - **Already open:** close the other server/client session. In MCP, explicitly call `open_program` again to retry after that lock error; other initialization failures still require restarting the server. Do not delete an active lock file to bypass it.
 - **Hash mismatch / affected 0.1.0 cache:** preserve and move that specific `eaos-analysis/<sha256>/` directory aside, then restart against the original binary. The new session will create a fresh cache. Do not treat existing mismatched records as verified evidence.
 - **Client cannot find uvx:** use the absolute result of `command -v uvx` in its config and restart the client.
-- **Analysis takes time (published 0.1.6):** initial analysis has no overall timeout. In MCP, ask for `open_program` status while it runs; terminal calls wait synchronously. A completed analysis is reused; interrupted work may need to start over. Per-function decompilation is limited to 60 seconds, and native requests after readiness still run serially.
+- **Analysis takes time:** 0.1.7 defaults to a 3,600-second initialization deadline and a 120-second native-request deadline; both are configurable as described above. In MCP, ask for `open_program` status while it runs; terminal calls wait synchronously. A completed analysis is reused; interrupted work may need to start over. Per-function decompilation is limited to 60 seconds, and native requests after readiness still run serially.
 
 ## Uninstall
 

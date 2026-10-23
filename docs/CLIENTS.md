@@ -1,11 +1,11 @@
 # Connect an MCP client
 
-Run setup and compile the example in [SETUP.md](SETUP.md) first. Replace `/absolute/path/to/program` with the selected binary; the server cannot switch targets during a session. These commands select version 0.1.6. For local wheel checks, replace the `--from` value with the absolute wheel path.
+Run setup and compile the example in [SETUP.md](SETUP.md) first. Replace `/absolute/path/to/program` with the selected binary; the server cannot switch targets during a session. These commands select version 0.1.7. For local wheel checks, replace the `--from` value with the absolute wheel path.
 
 ## Claude Code
 
 ```sh
-claude mcp add --transport stdio --scope local eaos -- uvx --python 3.13 --from every-app-is-open-source==0.1.6 eaos mcp /absolute/path/to/program
+claude mcp add --transport stdio --scope local eaos -- uvx --python 3.13 --from every-app-is-open-source==0.1.7 eaos mcp /absolute/path/to/program
 claude mcp get eaos
 ```
 
@@ -14,7 +14,7 @@ This is a deliberate client configuration change made by you, separate from EAOS
 ## Codex
 
 ```sh
-codex mcp add eaos -- uvx --python 3.13 --from every-app-is-open-source==0.1.6 eaos mcp /absolute/path/to/program
+codex mcp add eaos -- uvx --python 3.13 --from every-app-is-open-source==0.1.7 eaos mcp /absolute/path/to/program
 codex mcp get eaos
 ```
 
@@ -23,7 +23,7 @@ Equivalent TOML in your Codex config (use an absolute `uvx` command path if need
 ```toml
 [mcp_servers.eaos]
 command = "uvx"
-args = ["--python", "3.13", "--from", "every-app-is-open-source==0.1.6", "eaos", "mcp", "/absolute/path/to/program"]
+args = ["--python", "3.13", "--from", "every-app-is-open-source==0.1.7", "eaos", "mcp", "/absolute/path/to/program"]
 startup_timeout_sec = 30
 tool_timeout_sec = 180
 ```
@@ -37,7 +37,7 @@ These configuration commands do not require a particular model. The historical b
   "mcpServers": {
     "eaos": {
       "command": "uvx",
-      "args": ["--python", "3.13", "--from", "every-app-is-open-source==0.1.6", "eaos", "mcp", "/absolute/path/to/program"]
+      "args": ["--python", "3.13", "--from", "every-app-is-open-source==0.1.7", "eaos", "mcp", "/absolute/path/to/program"]
     }
   }
 }
@@ -61,8 +61,8 @@ The historical 0.1.1 check exercised the installed wheel over real stdio MCP, al
 
 A separate fresh **Codex CLI agent session** using **gpt-6.1-sol, high effort** then answered the documented example through the installed wheel. It used `open_program`, `search`, `inspect` and `read_evidence`, returned **45**, and explained both branches at `0x100000460`. The retrieved evidence matched the saved file and target hash. The agent received no source or expected answer and had no shell, filesystem, network, skills or memory access. Analysis was already cached. See the [actual walkthrough and public-safe transcript](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/docs/DEMO.md). This establishes one successful model/client walkthrough; it is not an independent first-time user test or a new benchmark.
 
-## Local 0.1.7 options (unreleased)
+## 0.1.7 analysis options
 
-The published commands above retain full analysis and do not include these source-only features. For an existing local checkout, configure the client to run that checkout's Python with `-m eaos.cli mcp /absolute/path/to/program --analysis-mode quick --architecture arm64`, with `PYTHONPATH` pointing at its absolute `src` directory and `EAOS_RUNTIME_DIR` at its existing `.tools`. Do not add these flags to a pinned 0.1.6 command. This documentation does not change client settings.
+The published commands above default to full analysis. To opt into quick analysis, append `--analysis-mode quick` to the 0.1.7 MCP command; `--architecture arm64` explicitly selects a compatible slice. These flags are unavailable in 0.1.6. This documentation does not change client settings.
 
-Quick mode reports partial coverage. Use `open_program` with `analysis_mode="full"` to open the independent full profile. `open_program(cancel=true)` or the client's MCP cancellation stops owned work. Status remains available during native requests; terminal calls wait synchronously. Details and deadline flags are in [SETUP.md](SETUP.md#local-017-development-options).
+Quick mode reports partial coverage. Use `open_program` with `analysis_mode="full"` to open the independent full profile. `open_program(cancel=true)` or the client's MCP cancellation stops owned work. Status remains available during native requests; terminal calls wait synchronously. Details and deadline flags are in [SETUP.md](SETUP.md#017-analysis-options).

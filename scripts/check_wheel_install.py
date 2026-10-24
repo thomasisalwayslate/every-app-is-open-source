@@ -66,11 +66,12 @@ def main():
     probe = subprocess.check_output([str(python),'-I','-c',
         'import json,sys,eaos.runtime;from importlib.metadata import version;'
         'print(json.dumps({"package":eaos.runtime.__file__,"sys_path":sys.path,'
-        '"versions":{p:version(p) for p in ["pyghidra","jpype1","packaging"]}}))'],
+        '"versions":{p:version(p) for p in ["pyghidra","jpype1","packaging","tree-sitter","tree-sitter-javascript"]}}))'],
         cwd=work,env=env,text=True)
     probe = json.loads(probe)
     assert not any(Path(p).is_relative_to(ROOT) for p in probe['sys_path'] if p)
-    assert probe['versions'] == {'pyghidra':'3.1.0','jpype1':'1.5.2','packaging':'26.3'}
+    assert probe['versions'] == {'pyghidra':'3.1.0','jpype1':'1.5.2','packaging':'26.3',
+                                 'tree-sitter':'0.26.0','tree-sitter-javascript':'0.25.0'}
     print(f'Wheel setup downloaded both runtimes and built ARM64 in {first_seconds:.1f}s.',flush=True)
     native = Path(first['ghidra'])/'Ghidra/Features/Decompiler/os/mac_arm_64/decompile'
     native_hash = sha(native)

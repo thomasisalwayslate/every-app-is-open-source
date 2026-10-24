@@ -35,7 +35,7 @@ class ApplicationSession(McpSession):
         evidence = Evidence(self.application._folder('evidence',snapshot),snapshot)
         self.application_evidence = evidence
         link = evidence.save(operation,'computed',data,
-            ['Selected-root inventory/lexical interpretations only; no application execution.',
+            ['Selected-root inventory/syntax interpretations only; no application execution.',
              'Selected-component coverage is not coverage of the entire application.'],
             {'application_snapshot':snapshot,'scope':'bounded_selected_root'})
         preview = json.loads(json.dumps(data))
@@ -53,7 +53,8 @@ class ApplicationSession(McpSession):
                     retained = {name:row[name] for name in
                                 ('component_id','path','kind','size','sha256','line','source_offset',
                                  'method','receiver','literal_argument','argument_status','relationship',
-                                 'classification','capturable') if name in row}
+                                 'classification','capturable','start_byte','end_byte','column_byte',
+                                 'callee_location','argument_location','module','syntax','reference') if name in row}
                     for name,value in list(retained.items()):
                         if isinstance(value,str) and len(value)>512:
                             retained[name]=value[:512]
@@ -64,7 +65,8 @@ class ApplicationSession(McpSession):
             # An unusual page can still be large. Preserve its exact page and
             # continuations in evidence instead of returning an incomplete view.
             preview={key:value for key,value in preview.items() if key in
-                     ('application_snapshot','component_id','source_sha256','view','matches','next_offset')}
+                     ('application_snapshot','component_id','source_sha256','parser','index_revision',
+                      'view','matches','next_offset','coverage','resource_limits')}
             preview.update(preview_omitted=True,
                            next='read_evidence with the returned id retrieves this page and its full coverage.')
         return {'classification':'computed','data':preview,'evidence':link,
@@ -210,5 +212,6 @@ class ApplicationSession(McpSession):
             if self.local_operation:
                 self.local_operation['event'].set()
             native = self.native
+        self.application.close()
         if native:
             native.close()

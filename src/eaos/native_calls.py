@@ -44,7 +44,11 @@ def provider(backend, deadline, cancelled=lambda: False):
         if backend.analysis_mode == 'quick':
             complete = False
             unresolved.append({'address':start,'reason':'Quick-mode references are partial; missing edges do not establish absence.'})
-            if backend.function_readiness.get(start,{}).get('state') != 'flow_prepared':
+            readiness = backend.function_readiness.get(start,{})
+            if readiness.get('state') == 'assembly_partial':
+                reasons = readiness.get('limitations') or ['Complete control flow was not established']
+                unresolved.append({'address':start,'reason':'Quick inspection retained partial assembly; '+'; '.join(reasons)+'. Use assembly or explicitly choose full analysis.'})
+            elif readiness.get('state') != 'flow_prepared':
                 unresolved.append({'address':start,'reason':'Function flow not prepared; inspect this function explicitly before deeper traversal.'})
         if direction == 'callees':
             scanned = 0

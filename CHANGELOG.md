@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.0
+
+- Preserve available symbol names for unprepared quick-function candidates during bounded native call traversal, without silently preparing bodies or expanding the discovery index.
+- Replace the earlier JavaScript lexer with pinned tree-sitter/JavaScript grammar parsing of coherent UTF-8 captures up to 8 MiB. Keep bounded explicit traversal continuation, view-bound result pagination, parse-error/coverage reporting and original byte spans. Owned-worker CPU/output/RSS/wall-time guards, cancellation and immutable progress/evidence remain explicit.
+- Add focused, computed preload API/import/channel slices with conservative mutation, escape, scope and loader refusals. Read supported closed literal definitions rather than guessing a value from a property name. These slices do not establish another component's handler or runtime delivery.
+- Add bounded selected-module and ancestor-skeleton source navigation, explicit omitted bodies and table/component/source identities. Local lexical ownership and narrow flat binding-name patterns support conditional module-key candidates; actual writes and unsupported patterns remain unresolved.
+- Compose selected checksum/target-validated inspection evidence into compact source nodes and conditional relationships, retaining each original profile and limitation. Equal channels or keys across tables do not create IPC edges; full original evidence remains readable after reopening.
+- Local static checks on official Electron Fiddle 0.39.0 produced 60 selected source nodes, six conditional module candidates and three preserved preload relationships, with zero complete main-process IPC edges. Dynamic replacement, loader/interop, inherited dispatch and process context remain unproved. No new model/benchmark run, performance/accuracy claim, app integration, host platform or REA-parity claim accompanies this work.
+
+**Breaking for clients consuming JavaScript results:** the observation/coverage result profile changes from the 0.1.9 lexical scan to coherent syntax records with original `start_byte`/`end_byte` spans and explicit index continuation. Clients must use the returned current views, coverage and offsets rather than assuming legacy lexical fields or complete traversal. Existing native tool names/arguments and full-analysis default remain. Earlier saved evidence stays readable and unchanged; old derived views/indexes or development module-profile inputs can require documented re-inspection. A cache revision is not deletion of historical evidence.
+
 ## 0.1.9 — 2026-10-23
 
 - Add bounded application-root inventory with an explicit external workspace and component selection. Capture verified bytes outside signed bundles; preserve existing standalone bundle-path rejection, component/profile identity, cancellation and earlier evidence. Native-file sessions expose eight tools; application-directory sessions expose eleven.

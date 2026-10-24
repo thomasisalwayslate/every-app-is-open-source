@@ -46,12 +46,14 @@ Costs are API-equivalent model costs; timings exclude initial analysis. Each row
 
 ## Get your first result
 
+These instructions target 0.2.0. Before publication, use the reviewed local wheel path in place of the package requirement.
+
 You need an Apple Silicon Mac, [uv](https://docs.astral.sh/uv/) and Apple's Command Line Tools (`xcode-select --install`). Windows, Linux and Intel Macs aren't supported yet.
 
 **1. Install.** This downloads checksum-pinned Java and Ghidra (about 770 MB) and builds Ghidra's Apple Silicon decompiler, which the official download doesn't include:
 
 ```sh
-uvx --python 3.13 --from every-app-is-open-source==0.1.9 eaos setup
+uvx --python 3.13 --from every-app-is-open-source==0.2.0 eaos setup
 ```
 
 Everything goes into `~/Library/Application Support/Every App Is Open Source/`. It doesn't touch your shell profile, your system Java or your agent's settings. Versions, sizes, troubleshooting and uninstall are in [SETUP.md](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/docs/SETUP.md).
@@ -66,7 +68,7 @@ __attribute__((noinline)) int quote(int n) { return n < 4 ? 19 : n * 7 + 3; }
 int main(int argc, char **argv) { puts("eaos fixture anchor"); return quote(argc); }
 C
 clang -O0 /tmp/eaos-example/example.c -o /tmp/eaos-example/example
-uvx --python 3.13 --from every-app-is-open-source==0.1.9 eaos call /tmp/eaos-example/example open_program
+uvx --python 3.13 --from every-app-is-open-source==0.2.0 eaos call /tmp/eaos-example/example open_program
 ```
 
 You should see `classification: computed`, an ARM64 language, a SHA-256 and an evidence ID.
@@ -74,7 +76,7 @@ You should see `classification: computed`, an ARM64 language, a SHA-256 and an e
 **3. Connect your agent.** For Claude Code:
 
 ```sh
-claude mcp add --transport stdio --scope local eaos -- uvx --python 3.13 --from every-app-is-open-source==0.1.9 eaos mcp /tmp/eaos-example/example
+claude mcp add --transport stdio --scope local eaos -- uvx --python 3.13 --from every-app-is-open-source==0.2.0 eaos mcp /tmp/eaos-example/example
 ```
 
 Codex and other MCP clients are in [CLIENTS.md](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/docs/CLIENTS.md).
@@ -88,14 +90,14 @@ The correct answer is **45**. This checks that your setup works; it doesn't prov
 For a standalone program, use the same `eaos mcp /absolute/path/to/program` command. For an application directory, select its root with an explicit external workspace:
 
 ```sh
-uvx --python 3.13 --from every-app-is-open-source==0.1.9 eaos mcp /Applications/Example.app --workspace /absolute/path/outside-bundles/eaos-workspace
+uvx --python 3.13 --from every-app-is-open-source==0.2.0 eaos mcp /Applications/Example.app --workspace /absolute/path/outside-bundles/eaos-workspace
 ```
 
 Ask the agent to inventory the root, select one native component by its returned ID, then inspect that component. Full native analysis remains the default; quick mode is opt-in. Individual executable paths inside bundles are still refused; [copy the executable out](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/docs/SETUP.md#macos-app-bundles) for standalone analysis. For big standalone programs, terminal pre-analysis can finish before you connect your agent.
 
 ## The tools
 
-I started with seven tools based on the calls agents made across 24 earlier test runs. Native-file sessions now expose **eight**, including bounded static call traversal. Application-directory sessions expose **eleven**, adding inventory, explicit component selection and initial JavaScript inspection.
+I started with seven tools based on the calls agents made across 24 earlier test runs. Native-file sessions now expose **eight**, including bounded static call traversal. Application-directory sessions expose **eleven**, adding inventory, explicit component selection and bounded JavaScript inspection.
 
 | Tool | What it does |
 |---|---|
@@ -114,9 +116,15 @@ Application-directory sessions also expose:
 |---|---|
 | `inventory_application` | Inventory a selected root and supported ASAR members, with explicit gaps and budgets |
 | `select_component` | Capture and select one inventoried native component outside the original bundle |
-| `inspect_javascript` | Observe supported literal imports, preload properties and call spellings in bounded UTF-8 source |
+| `inspect_javascript` | Inspect captured JavaScript source; development profiles add focused preload/module inspection and bounded evidence relationships |
 
-This is initial, partial JavaScript/ASAR inspection. In local checks on official Electron Fiddle 0.39.0, inventory, preload inspection and native launcher analysis worked; its main and renderer bundles exceeded the **1 MiB** inspection cap. No IPC graph was established. A separate bounded Ghostty trace did not establish the complete Swift/C/Zig reload chain. These checks do not establish full Electron support, reconstructed applications, comparative performance or reliable agent answers.
+**0.2.0** extends the initial JavaScript/ASAR inspection from 0.1.9, which was limited to **1 MiB** of source.
+
+The 0.2.0 source profiles accept coherent JavaScript captures up to **8 MiB**, with explicit bounded syntax-index continuation and fixed result pages. Focus one observed preload API, inspect one selected module or its surrounding loader skeleton, then compose selected saved evidence into a compact source relationship pack. Every candidate retains its component, source, table and evidence identity; unknown bindings remain explicit. Python parser dependencies come with the package; no JavaScript or application is executed.
+
+On official Electron Fiddle 0.39.0, the recorded development check inspected its large bundles and produced 60 selected source nodes, six conditional module-lookup candidates and three preserved narrow preload relationships. It established **no complete main-process IPC edge**: dynamic factory replacement, loader/interop identity, inherited dispatch and process context remain unresolved. These are local static checks, not a comparative benchmark or a test of reliable agent answers. A separate bounded Ghostty trace still did not establish the complete Swift/C/Zig reload chain. Full Electron support, reconstructed applications and REA parity are not established.
+
+Native traversal also retains available names for unprepared quick-mode candidates. That does not prepare their instruction bodies or establish missing relationships. Full native analysis remains the default.
 
 The exact inputs, outputs and limits of each one are in the [tool contract](https://github.com/thomasisalwayslate/every-app-is-open-source/blob/main/docs/TOOL-CONTRACT.md).
 
@@ -124,7 +132,7 @@ The exact inputs, outputs and limits of each one are in the [tool contract](http
 
 Each tool result is labelled:
 
-- **fact**: read straight from the binary
+- **fact**: read straight from the captured binary or source
 - **computed**: worked out from it, like decompiled code or a decoded string
 - **guess**: an inference that hasn't been verified
 

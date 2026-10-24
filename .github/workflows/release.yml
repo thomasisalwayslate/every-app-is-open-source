@@ -65,7 +65,7 @@ jobs:
           sha256sum dist/*.whl dist/*.tar.gz > SHA256SUMS
           python3 -c 'import json, os; print(json.dumps({"commit": os.environ["GITHUB_SHA"], "run_id": os.environ["GITHUB_RUN_ID"]}))' > BUILD-INFO.json
       - name: Keep the checked artifacts for the publisher
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: checked-python-release
           retention-days: 7

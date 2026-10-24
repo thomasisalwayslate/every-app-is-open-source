@@ -18,13 +18,14 @@ import tempfile
 import time
 
 from . import identity
-from .javascript import inspect_source
+from .js_index import SyntaxOwner, inspect_index, digest as syntax_digest
+from .js_syntax import SOURCE_LIMIT, parser_identity
 
 SCHEMA = 1
 DEFAULT_LIMITS = {'files': 10000, 'depth': 16, 'file_bytes': 128 * 1024 * 1024,
                   'total_bytes': 512 * 1024 * 1024, 'seconds': 15.0,
                   'asar_header_bytes': 8 * 1024 * 1024, 'asar_entries': 10000,
-                  'javascript_bytes': 1024 * 1024}
+                  'javascript_bytes': SOURCE_LIMIT}
 
 
 def _digest(data):
@@ -185,6 +186,10 @@ class Application:
         self.cancelled = cancelled
         self._manifest = None
         self._deadline = 0
+        self.syntax_owner = SyntaxOwner()
+
+    def close(self):
+        self.syntax_owner.close()
 
     def _check(self):
         if self.cancelled and self.cancelled():
@@ -570,23 +575,44 @@ class Application:
         finally:
             self._deadline = 0
 
-    def inspect_javascript(self, component_id, offset=0, limit=30, view=None):
-        if isinstance(offset, bool) or not isinstance(offset, int) or offset < 0 or isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 200:
-            raise ValueError('Invalid JavaScript observation pagination')
+    def inspect_javascript(self, component_id, offset=0, limit=30, view=None,
+                           index_cursor=None, find='', source_offset=None, source_length=2048):
+        if (type(offset) is not int or offset < 0 or type(limit) is not int or not 1 <= limit <= 200
+                or not isinstance(find, str) or len(find) > 256
+                or (index_cursor is not None and (not isinstance(index_cursor, str) or len(index_cursor) > 200))
+                or (source_offset is not None and (type(source_offset) is not int or source_offset < 0))
+                or type(source_length) is not int or not 1 <= source_length <= 8192):
+            raise ValueError('Invalid JavaScript inspection bounds')
         row = self._component(component_id)
         if row['kind'] != 'javascript':
             raise ValueError('Selected component is not supported JavaScript source')
-        if row['size'] > self.limits['javascript_bytes']:
-            raise ValueError('JavaScript component exceeds inspection byte budget')
+        if row['size'] > min(self.limits['javascript_bytes'], SOURCE_LIMIT):
+            raise ValueError('JavaScript component exceeds coherent-parse byte budget')
         captured = self.capture(component_id)
-        data = Path(captured['path']).read_bytes()
-        if _digest(data) != captured['sha256']:
-            raise ValueError('Immutable JavaScript capture changed before inspection')
-        result = inspect_source(data, max_bytes=self.limits['javascript_bytes'], max_seconds=self.limits['seconds'], cancelled=self.cancelled)
-        expected = _key({'component': component_id, 'sha256': captured['sha256'], 'schema': SCHEMA})
-        if (view is not None and view != expected) or (offset and view is None):
-            raise ValueError('Stale/missing JavaScript view; request offset=0 without view')
-        observations = result.pop('observations')
-        return dict(result, application_snapshot=captured['application_snapshot'], component_id=component_id,
-                    view=expected, observations=observations[offset:offset+limit], matches=len(observations),
-                    next_offset=offset+limit if offset+limit < len(observations) else None)
+        if source_offset is not None:
+            if index_cursor is not None or view is not None or offset or find:
+                raise ValueError('Source windows do not page or expand the syntax index')
+            data = Path(captured['path']).read_bytes()
+            if _digest(data) != captured['sha256']:
+                raise ValueError('Immutable JavaScript capture changed')
+            data.decode('utf-8')
+            if source_offset > len(data):
+                raise ValueError('Source offset exceeds captured bytes')
+            start = source_offset
+            while start < len(data) and data[start] & 0xc0 == 0x80:
+                start += 1
+            end = min(len(data), start + source_length)
+            while end > start and end < len(data) and data[end] & 0xc0 == 0x80:
+                end -= 1
+            if end == start and start < len(data):
+                raise ValueError('source_length is too small for a UTF-8 character; request at least four bytes')
+            return {'classification': 'fact', 'application_snapshot': captured['application_snapshot'],
+                    'component_id': component_id, 'source_sha256': captured['sha256'],
+                    'source_window': {'requested_start_byte': source_offset, 'start_byte': start, 'end_byte': end, 'text': data[start:end].decode('utf-8'),
+                                      'next_source_offset': end if end < len(data) else None},
+                    'limitations': ['Captured source display only; no parsing, index expansion or execution.']}
+        folder = self._folder('javascript', captured['application_snapshot'], component_id,
+                              syntax_digest(parser_identity()))
+        return inspect_index(self.syntax_owner, captured, folder, offset=offset, limit=limit, view=view,
+                             index_cursor=index_cursor, find=find, cancelled=self.cancelled,
+                             wall_seconds=min(15.0, self.limits['seconds']))

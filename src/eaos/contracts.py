@@ -133,12 +133,16 @@ APPLICATION_TOOLS = [
           'architecture': {'type':'string','enum':['auto','arm64','arm64e','x86_64']},
           'analysis_mode': {'type':'string','enum':['full','quick']}}, ['component_id'])),
  ('inspect_javascript',
-  'Inspect a captured JavaScript component from the selected root. Narrow lexical direct-call '
-  'observations only: package entry, literal imports, preload/load targets and IPC channel sites. '
-  'Dynamic expressions, unparsed syntax and unsupported layouts remain explicit; co-location '
-  'or equal channel names do not prove a call or IPC connection.',
+  'Inspect captured JavaScript syntax without execution (up to 8 MiB coherent source). Small pages; '
+  'find filters committed observations. Use view+offset to page; index_cursor explicitly scans the '
+  'next bounded syntax batch and invalidates old views. source_offset displays a bounded byte window '
+  'without indexing. Call spellings are syntax only: bindings, module/IPC links and runtime behavior '
+  'remain unverified. Check coverage before interpreting missing results.',
   schema({'component_id': S, 'offset': {'type':'integer','minimum':0},
-          'limit': {'type':'integer','minimum':1,'maximum':200}, 'view': S}, ['component_id']))]
+          'limit': {'type':'integer','minimum':1,'maximum':200}, 'view': S,
+          'find': {'type':'string','maxLength':256}, 'index_cursor': {'type':'string','maxLength':200},
+          'source_offset': {'type':'integer','minimum':0},
+          'source_length': {'type':'integer','minimum':1,'maximum':8192}}, ['component_id']))]
 
 SCHEMAS = {name: spec for name, _, spec in TOOLS + APPLICATION_TOOLS}
 

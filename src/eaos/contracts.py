@@ -139,14 +139,18 @@ APPLICATION_TOOLS = [
   'without indexing. Call spellings are syntax only: bindings, module/IPC links and runtime behavior '
   'remain unverified. binding_at focuses one observed exposeInMainWorld call; optional api selects '
   'one exposed member for a bounded computed binding slice. Unknown loaders/channels stay unresolved. '
-  'Check coverage before interpreting missing results.',
+  'module_at selects one enclosing literal table-method candidate; module_id explicitly selects '
+  'another header in that table. module_kind returns bounded declarations/assignments/functions/calls '
+  'or ancestors (enclosing skeleton, table bodies omitted) as syntax facts. Loader/binding/runtime roles stay unverified. Check coverage.',
   schema({'component_id': S, 'offset': {'type':'integer','minimum':0},
           'limit': {'type':'integer','minimum':1,'maximum':200}, 'view': S,
           'find': {'type':'string','maxLength':256}, 'index_cursor': {'type':'string','maxLength':200},
           'source_offset': {'type':'integer','minimum':0},
           'source_length': {'type':'integer','minimum':1,'maximum':8192},
           'binding_at': {'type':'integer','minimum':0},
-          'api': {'type':'string','minLength':1,'maxLength':128}}, ['component_id']))]
+          'api': {'type':'string','minLength':1,'maxLength':128},
+          'module_at': {'type':'integer','minimum':0}, 'module_id': {'type':'string','minLength':1,'maxLength':128},
+          'module_kind': {'type':'string','enum':['declarations','assignments','functions','calls','ancestors']}}, ['component_id']))]
 
 SCHEMAS = {name: spec for name, _, spec in TOOLS + APPLICATION_TOOLS}
 

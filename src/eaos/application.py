@@ -577,15 +577,22 @@ class Application:
 
     def inspect_javascript(self, component_id, offset=0, limit=30, view=None,
                            index_cursor=None, find='', source_offset=None, source_length=2048,
-                           binding_at=None, api=None):
+                           binding_at=None, api=None, module_at=None, module_id=None, module_kind='declarations'):
         if (type(offset) is not int or offset < 0 or type(limit) is not int or not 1 <= limit <= 200
                 or not isinstance(find, str) or len(find) > 256
                 or (index_cursor is not None and (not isinstance(index_cursor, str) or len(index_cursor) > 200))
                 or (source_offset is not None and (type(source_offset) is not int or source_offset < 0))
                 or type(source_length) is not int or not 1 <= source_length <= 8192
                 or (binding_at is not None and (type(binding_at) is not int or binding_at < 0))
-                or (api is not None and (not isinstance(api,str) or not 1 <= len(api) <= 128))):
+                or (api is not None and (not isinstance(api,str) or not 1 <= len(api) <= 128))
+                or (module_at is not None and (type(module_at) is not int or module_at < 0))
+                or (module_id is not None and (not isinstance(module_id,str) or not 1 <= len(module_id) <= 128))
+                or module_kind not in ('declarations','assignments','functions','calls','ancestors')):
             raise ValueError('Invalid JavaScript inspection bounds')
+        if (module_id is not None or module_kind != 'declarations') and module_at is None:
+            raise ValueError('module_id requires module_at from an observed source location')
+        if module_at is not None and (binding_at is not None or api is not None or index_cursor is not None or source_offset is not None):
+            raise ValueError('Selected-module syntax is separate from binding focus, source windows and global syntax-index expansion')
         if api is not None and binding_at is None:
             raise ValueError('api requires binding_at from an observed exposeInMainWorld start_byte')
         if binding_at is not None and (index_cursor is not None or view is not None or offset or find or source_offset is not None):
@@ -620,6 +627,19 @@ class Application:
                     'limitations': ['Captured source display only; no parsing, index expansion or execution.']}
         folder = self._folder('javascript', captured['application_snapshot'], component_id,
                               syntax_digest(parser_identity()))
+        if module_at is not None:
+            if module_at >= row['size']:
+                raise ValueError('module_at exceeds captured source')
+            if offset and view is None:
+                raise ValueError('Stale/missing selected-module view; request offset=0')
+            result = self.syntax_owner.run({'capture':captured['path'],'sha256':captured['sha256'],
+                'module_at':module_at,'module_id':module_id,'module_kind':module_kind,
+                'namespace_context':{'application_snapshot':captured['application_snapshot'],'component_id':component_id},
+                'find':find,'offset':offset,'limit':limit,'view':view},folder=folder,
+                cancelled=self.cancelled,wall_seconds=min(15.0,self.limits['seconds']))
+            return {**result['module'],'application_snapshot':captured['application_snapshot'],
+                    'component_id':component_id,'source_sha256':captured['sha256'],
+                    'parser':parser_identity(),'resource_limits':result['resource_limits']}
         if binding_at is not None:
             if binding_at >= row['size']:
                 raise ValueError('binding_at exceeds captured source')

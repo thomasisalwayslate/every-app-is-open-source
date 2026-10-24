@@ -31,6 +31,14 @@ serve(ApplicationSession(sys.argv[1],sys.argv[2]))
 
 class SyntaxTransport(unittest.TestCase):
     def test_cancel_then_ping_and_eof_reap_workers(self):
+        self.exercise_transport({})
+
+    def test_selected_module_and_ancestor_cancellation_use_the_same_owner(self):
+        for kind in ('calls','ancestors'):
+            with self.subTest(kind=kind):
+                self.exercise_transport({'module_at':0,'module_kind':kind})
+
+    def exercise_transport(self, mode):
         with tempfile.TemporaryDirectory() as tmp:
             base=Path(tmp);root=base/'Fixture.app';root.mkdir()
             (root/'main.js').write_text('obj.handle("channel",f)')
@@ -61,10 +69,12 @@ class SyntaxTransport(unittest.TestCase):
                     send('tools/call',{'name':'inventory_application','arguments':{}},1)
                     inv=receive(1)
                     component=json.loads(inv['result']['content'][0]['text'])['data']['items'][0]['component_id']
-                    params={'name':'inspect_javascript','arguments':{'component_id':component}}
+                    params={'name':'inspect_javascript','arguments':dict(component_id=component,**mode)}
                     send('tools/call',params,2);started(1)
                     send('tools/call',{'name':'select_component','arguments':{'component_id':component}},3)
-                    self.assertTrue(receive(3)['result']['isError'])
+                    busy=receive(3)['result']
+                    self.assertTrue(busy['isError'])
+                    self.assertIn('Another selected-root operation is active',json.dumps(busy))
                     start=time.monotonic()
                     send('notifications/cancelled',{'requestId':2})
                     send('ping',identifier=4)

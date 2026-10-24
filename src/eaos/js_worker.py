@@ -31,9 +31,13 @@ def main():
         if hashlib.sha256(payload).hexdigest() != config['state_sha256']:
             raise ValueError('Committed syntax state changed')
         previous = json.loads(payload)['progress']
-    progress = parse_batch(raw, previous, max_nodes=config['max_nodes'],
-                           max_seconds=config['batch_seconds'])
-    result = {'progress': progress, 'worker_pid': os.getpid(),
+    if config.get('binding_at') is not None:
+        from .js_bindings import inspect_binding
+        payload = {'binding': inspect_binding(raw, config['binding_at'], config.get('api'))}
+    else:
+        payload = {'progress': parse_batch(raw, previous, max_nodes=config['max_nodes'],
+                                           max_seconds=config['batch_seconds'])}
+    result = {**payload, 'worker_pid': os.getpid(),
               'peak_rss_bytes': resource.getrusage(resource.RUSAGE_SELF).ru_maxrss *
                                 (1 if sys.platform == 'darwin' else 1024)}
     sys.stdout.write(json.dumps(result, ensure_ascii=True, separators=(',', ':')))

@@ -41,7 +41,7 @@ class ApplicationSession(McpSession):
         preview = json.loads(json.dumps(data))
         # Full immutable records stay on disk; inventory gaps and lexical strings
         # must not defeat the small-answer default or silently claim completeness.
-        for container, key in ((preview,'relationships'),(preview.get('coverage',{}),'gaps'),
+        for container, key in ((preview,'relationships'),(preview,'unresolved'),(preview,'static_steps'),(preview.get('coverage',{}),'gaps'),
                                (preview.get('coverage',{}),'unparsed')):
             if key in container and len(container[key])>8:
                 container[key+'_total']=len(container[key])
@@ -66,7 +66,9 @@ class ApplicationSession(McpSession):
             # continuations in evidence instead of returning an incomplete view.
             preview={key:value for key,value in preview.items() if key in
                      ('application_snapshot','component_id','source_sha256','parser','index_revision',
-                      'view','matches','next_offset','coverage','resource_limits')}
+                      'view','matches','next_offset','coverage','resource_limits','binding_identity',
+                      'binding_schema','focus','namespace','lexical_callee_origin','callee_origin',
+                      'unresolved','unresolved_total','unresolved_truncated')}
             preview.update(preview_omitted=True,
                            next='read_evidence with the returned id retrieves this page and its full coverage.')
         return {'classification':'computed','data':preview,'evidence':link,

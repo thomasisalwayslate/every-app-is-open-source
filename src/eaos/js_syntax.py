@@ -11,7 +11,7 @@ from array import array
 import time
 from importlib.metadata import version
 
-SCHEMA = 2
+SCHEMA = 3
 SOURCE_LIMIT = 8 * 1024 * 1024
 NODE_LIMIT = 100000
 RECORD_LIMIT = 20000
@@ -94,6 +94,8 @@ def observation(data, node, newlines):
             item = {'kind': 'source_map_reference', 'reference': match[1],
                     'availability': 'not_resolved; declaration only'}
     if item is not None:
+        if node.type == 'call_expression' and item.get('argument_status') == 'dynamic_or_unsupported':
+            item['argument_expression'] = text(data, first, 128)
         return dict(item, classification='fact', **location(node, newlines),
                     relationship='syntax occurrence only; binding, reachability and runtime dispatch unverified')
     return None

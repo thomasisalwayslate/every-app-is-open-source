@@ -71,6 +71,14 @@ class Bindings(unittest.TestCase):
             self.assertNotIn('selected_api',result,result)
             self.assertTrue(result['unresolved'])
 
+    def test_table_and_cache_aggregate_aliases_are_not_checked_loader_state(self):
+        for extra in ('const box={table};box.table[61]=fake;',
+                      'const box={cache};box.cache[61]={exports:fake};'):
+            source=webpack().replace('const e=load(61);',extra+'const e=load(61);')
+            result=inspect(source)
+            self.assertIsNone(result.get('callee_origin'),result)
+            self.assertFalse(result.get('selected_api',{}).get('ipc_calls'))
+
     def test_shadowing_and_mutation_never_become_electron_binding(self):
         for source in [direct("const e={contextBridge:fake,ipcRenderer:fake};"),
                        direct("let e=require('electron');"),

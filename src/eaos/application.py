@@ -576,13 +576,20 @@ class Application:
             self._deadline = 0
 
     def inspect_javascript(self, component_id, offset=0, limit=30, view=None,
-                           index_cursor=None, find='', source_offset=None, source_length=2048):
+                           index_cursor=None, find='', source_offset=None, source_length=2048,
+                           binding_at=None, api=None):
         if (type(offset) is not int or offset < 0 or type(limit) is not int or not 1 <= limit <= 200
                 or not isinstance(find, str) or len(find) > 256
                 or (index_cursor is not None and (not isinstance(index_cursor, str) or len(index_cursor) > 200))
                 or (source_offset is not None and (type(source_offset) is not int or source_offset < 0))
-                or type(source_length) is not int or not 1 <= source_length <= 8192):
+                or type(source_length) is not int or not 1 <= source_length <= 8192
+                or (binding_at is not None and (type(binding_at) is not int or binding_at < 0))
+                or (api is not None and (not isinstance(api,str) or not 1 <= len(api) <= 128))):
             raise ValueError('Invalid JavaScript inspection bounds')
+        if api is not None and binding_at is None:
+            raise ValueError('api requires binding_at from an observed exposeInMainWorld start_byte')
+        if binding_at is not None and (index_cursor is not None or view is not None or offset or find or source_offset is not None):
+            raise ValueError('Binding focus is a separate bounded operation; do not combine it with syntax paging/expansion or source windows')
         row = self._component(component_id)
         if row['kind'] != 'javascript':
             raise ValueError('Selected component is not supported JavaScript source')
@@ -613,6 +620,19 @@ class Application:
                     'limitations': ['Captured source display only; no parsing, index expansion or execution.']}
         folder = self._folder('javascript', captured['application_snapshot'], component_id,
                               syntax_digest(parser_identity()))
+        if binding_at is not None:
+            if binding_at >= row['size']:
+                raise ValueError('binding_at exceeds captured source')
+            from .js_bindings import BINDING_SCHEMA
+            result = self.syntax_owner.run({'capture':captured['path'],'sha256':captured['sha256'],
+                'binding_at':binding_at,'api':api},folder=folder,cancelled=self.cancelled,
+                wall_seconds=min(15.0,self.limits['seconds']))
+            return {**result['binding'],'application_snapshot':captured['application_snapshot'],
+                    'component_id':component_id,'source_sha256':captured['sha256'],
+                    'binding_identity':syntax_digest({'snapshot':captured['application_snapshot'],
+                        'component':component_id,'sha256':captured['sha256'],'parser':parser_identity(),
+                        'binding_schema':BINDING_SCHEMA,'binding_at':binding_at,'api':api}),
+                    'parser':parser_identity(),'resource_limits':result['resource_limits']}
         return inspect_index(self.syntax_owner, captured, folder, offset=offset, limit=limit, view=view,
                              index_cursor=index_cursor, find=find, cancelled=self.cancelled,
                              wall_seconds=min(15.0, self.limits['seconds']))

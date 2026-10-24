@@ -1,10 +1,12 @@
 """Portable malformed-metadata and literal-boundary regressions; no Go/JVM needed."""
 import hashlib
+import json
 from pathlib import Path
 import struct
 import tempfile
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
+from types import SimpleNamespace
 
 from eaos.golang import (UnsupportedGo, build_version, header_offsets, literal_matches,
                          parse_pclntab, read_cache, write_cache)
@@ -124,6 +126,51 @@ class GoLiterals(unittest.TestCase):
         rows,complete=literal_matches([(0,b'aaa')],'a',maximum=2)
         self.assertFalse(complete)
         self.assertEqual(len(rows),2)
+
+
+class GoSearchCoverage(unittest.TestCase):
+    def test_go_and_quick_literal_completion_are_independent(self):
+        from eaos.backend import Backend
+        cases=[('quick','available',False,True),('quick','available',True,False),
+               ('quick','partial',True,True),('full','available',True,None),
+               ('full','available',False,None)]
+        for mode,status,go_complete,quick_complete in cases:
+            with self.subTest(mode=mode,status=status,go=go_complete,quick=quick_complete),tempfile.TemporaryDirectory() as folder:
+                target=Path(folder)/'input';target.write_bytes(b'controlled bytes, never executed')
+                backend=Backend(str(target),analysis_mode=mode)
+                backend._load=Mock();backend.program=program=Mock()
+                program.getListing.return_value.getDefinedData.return_value=[]
+                program.getReferenceManager.return_value.getReferencesTo.return_value=[]
+                backend.go_literals=[(0x100,b'go match')]
+                backend.literal_blocks=[(0x200,b'quick match')]
+                backend.go_status={'literal_bytes':8,'literal_search':status,'names':'available'}
+                row=lambda address:{'address':address,'text':'match','source':'literal_bytes','extent':'match','byte_length':5}
+                def matches(blocks,query):
+                    self.assertEqual(query,'match')
+                    if blocks is backend.go_literals:return [row('100')],go_complete
+                    self.assertEqual(mode,'quick')
+                    self.assertIs(blocks,backend.literal_blocks)
+                    return [row('200')],quick_complete
+                try:
+                    for full in (False,True):
+                        with patch.dict('sys.modules',{'java.lang':SimpleNamespace(String=str)}),patch('eaos.golang.literal_matches',side_effect=matches) as scan:
+                            result=backend.search(kind='strings',pattern='match',full=full)
+                        coverage=result['data']['coverage']
+                        self.assertEqual(coverage['complete'],go_complete and status=='available')
+                        if mode=='quick':
+                            self.assertEqual(coverage['quick_literal_search']['literal_search_complete_within_budget'],quick_complete)
+                            self.assertEqual(coverage['quick_literal_search']['scope'],'bounded initialized read-only non-executable blocks')
+                        else:self.assertNotIn('quick_literal_search',coverage)
+                        self.assertEqual(scan.call_count,2 if mode=='quick' else 1)
+                        self.assertEqual(result['data']['matches'],2 if mode=='quick' else 1)
+                        saved=json.loads(backend.read_evidence(result['evidence']['id'])['text'])
+                        expected=saved['data']['coverage']
+                        if not full:expected.pop('literal_ranges')
+                        self.assertEqual(expected,coverage)
+                        stopped=not go_complete or (mode=='quick' and not quick_complete)
+                        self.assertEqual(any('matches is a lower bound' in text for text in result['limitations']),stopped)
+                finally:
+                    backend.program=None;backend.close()
 
 
 if __name__=='__main__':unittest.main()

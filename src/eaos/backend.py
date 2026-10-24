@@ -532,7 +532,7 @@ class Backend:
                 coverage = {'function_candidates': self.quick_name_coverage}
         elif kind == 'strings':
             from java.lang import String
-            literals, complete = golang.literal_matches(self.go_literals,query) if self.go_status and query else ([],True)
+            literals, go_complete = golang.literal_matches(self.go_literals,query) if self.go_status and query else ([],True)
             literals.sort(key=lambda item:int(item['address'],16))
             raw_addresses = [int(item['address'],16) for item in literals]
             for item in self.program.getListing().getDefinedData(True):
@@ -549,20 +549,23 @@ class Backend:
                     rows.append({'address':str(item.getAddress()),'text':text,'source':'ghidra_defined','extent':'defined_data'})
             rows.extend(literals)
             if self.analysis_mode == 'quick' and query:
-                extra, complete = golang.literal_matches(self.literal_blocks, query)
+                extra, quick_complete = golang.literal_matches(self.literal_blocks, query)
                 existing = {item['address'] for item in rows}
                 rows.extend({**item,'source':'literal_bytes'} for item in extra if item['address'] not in existing)
-                coverage = {'literal_search_complete_within_budget': complete,
+                coverage = {'literal_search_complete_within_budget': quick_complete,
                             'scope':'bounded initialized read-only non-executable blocks',
                             'references':'partial; empty does not establish absence'}
             if self.go_status:
+                quick_coverage = coverage
                 coverage = {'literal_bytes':self.go_status['literal_bytes'],
                     'scope':'initialized read-only non-executable blocks, excluding named pclntab',
                     'literal_search_performed':bool(query),
-                    'complete':bool(query) and complete and self.go_status['literal_search']=='available',
+                    'complete':bool(query) and go_complete and self.go_status['literal_search']=='available',
                     'literal_ranges':[{'start':f'{address:x}','end':f'{address+len(raw):x}'} for address,raw in self.go_literals],
                     'case_matching':'ASCII-insensitive; other UTF-8 literals exact'}
-                if not complete:limitations.append('Literal matches stopped at 10000; refine the pattern. matches is a lower bound.')
+                if quick_coverage is not None:coverage['quick_literal_search'] = quick_coverage
+                if not go_complete or (quick_coverage is not None and not quick_complete):
+                    limitations.append('Literal matches stopped at 10000; refine the pattern. matches is a lower bound.')
                 if not query:limitations.append('Empty patterns list defined strings only; raw Go literal search requires a pattern.')
                 limitations.append('literal_bytes rows are matched slices, not complete Go string objects; references are Ghidra computations.')
         else:

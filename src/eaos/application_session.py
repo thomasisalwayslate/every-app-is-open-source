@@ -54,7 +54,7 @@ class ApplicationSession(McpSession):
                                 ('component_id','path','kind','size','sha256','line','source_offset',
                                  'method','receiver','literal_argument','argument_status','relationship',
                                  'classification','capturable','start_byte','end_byte','column_byte',
-                                 'callee_location','argument_location','module','syntax','reference') if name in row}
+                                 'callee_location','argument_location','argument_expression','module','syntax','reference') if name in row}
                     for name,value in list(retained.items()):
                         if isinstance(value,str) and len(value)>512:
                             retained[name]=value[:512]

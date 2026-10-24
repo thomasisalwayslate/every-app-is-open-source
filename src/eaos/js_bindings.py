@@ -9,7 +9,7 @@ from array import array
 import re
 import time
 from .js_syntax import SOURCE_LIMIT, literal, location, text
-BINDING_SCHEMA = 3
+BINDING_SCHEMA = 7
 FUNCTIONS = {'function_declaration', 'function_expression', 'arrow_function', 'generator_function', 'generator_function_declaration', 'method_definition'}
 SCOPES = FUNCTIONS | {'program', 'statement_block', 'catch_clause', 'for_statement', 'for_in_statement', 'switch_body', 'class_body'}
 MAX_NODES = 30000
@@ -324,6 +324,18 @@ class Slice:
             self.trace = saved_trace
             self.reasons = saved_reasons
 
+    def binding_references_allowed(self, binding, permitted):
+        """Refuse hidden aggregates/aliases of checked loader state."""
+        for node in self.nodes:
+            if node.type not in ('identifier', 'shorthand_property_identifier') or self.binding(text(self.data,node),node) != binding:
+                continue
+            declarations = [entry[1] for entry in binding[2]]
+            names = [decl.child_by_field_name('name') if decl.type in ('variable_declarator','function_declaration') else decl for decl in declarations]
+            spans = permitted + [name for name in names if name is not None]
+            if not any(span.start_byte <= node.start_byte and node.end_byte <= span.end_byte for span in spans):
+                return False
+        return True
+
     def dispatcher_return_shape(self, dispatcher, dispatch, module, module_init, parameter):
         """Recognize one narrow cached-module recipe, not arbitrary call similarity."""
         body = dispatcher.child_by_field_name('body')
@@ -363,6 +375,8 @@ class Slice:
             root = self.root_identifier(write)
             if root and self.binding(text(self.data, root), root) == cache_binding and (key(write) != key(init_left)):
                 return False
+        if not self.binding_references_allowed(cache_binding,[cached_init.child_by_field_name('object'),init_left.child_by_field_name('object')]):
+            return False
         fresh_declaration = fresh.named_child(0)
         if key(fresh_declaration.child_by_field_name('value')) != key(module_init):
             return False
@@ -392,7 +406,36 @@ class Slice:
         value = consequence.named_child(0)
         return value.type == 'member_expression' and text(self.data, value.child_by_field_name('object')) == text(self.data, cached_name) and (text(self.data, value.child_by_field_name('property')) == 'exports')
 
-    def webpack_external(self, function, args, seen):
+    def closed_factory_table(self, table):
+        """This slice does not model arbitrary cross-factory loader propagation."""
+        names = set()
+        for entry in children(table):
+            name_node = entry.child_by_field_name('name') or entry.child_by_field_name('key')
+            name = literal(self.data,name_node) if name_node and name_node.type=='string' else text(self.data,name_node)
+            if name_node is None or name_node.type == 'computed_property_name' or name in ('__proto__','prototype','constructor') or name in names:
+                return False
+            names.add(name)
+            factory = entry if entry.type == 'method_definition' else entry.child_by_field_name('value') if entry.type == 'pair' else None
+            if factory is None or factory.type not in ('method_definition','function_expression','arrow_function'):
+                return False
+            if entry.type == 'method_definition' and self.data[entry.start_byte:name_node.start_byte].strip():
+                return False
+            if factory.type == 'function_expression' and not self.data[factory.start_byte:factory.start_byte+8].startswith(b'function'):
+                return False
+            if any(factory.start_byte < node.start_byte < factory.end_byte and (node.type == 'this' or (node.type == 'identifier' and text(self.data,node) == 'arguments' and self.binding('arguments',node) is None)) for node in self.nodes):
+                return False  # Implicit table/loader aliases are outside the closed slice.
+            params = children(factory.child_by_field_name('parameters'))
+            if len(params) >= 3:
+                if params[2].type != 'identifier':
+                    return False
+                loader = self.binding(text(self.data,params[2]),params[2])
+                # Passing the loader is part of the call recipe, but recovering
+                # arbitrary uses of its alias inside another factory is not.
+                if loader and not self.binding_references_allowed(loader,[]):
+                    return False
+        return True
+
+    def webpack_factory(self, function, args):
         if function is None or function.type != 'identifier' or len(args) != 1:
             return None
         binding = self.binding(text(self.data, function), function)
@@ -431,7 +474,7 @@ class Slice:
                 continue
             table_value, table_decl = table_binding[2][0]
             obj = table_value[1]
-            if obj is None or obj.type != 'object':
+            if obj is None or obj.type != 'object' or not self.closed_factory_table(obj):
                 continue
             # The factory must receive the fresh cached module object.
             module_binding = self.binding(text(self.data, actual[0]), actual[0])
@@ -449,6 +492,8 @@ class Slice:
             export_obj = props[0].child_by_field_name('value')
             if export_obj is None or export_obj.type != 'object' or export_obj.named_child_count:
                 continue
+            if not self.binding_references_allowed(table_binding,[table]):
+                continue
             if not self.dispatcher_return_shape(dispatcher, call, actual[0], init, params[0]):
                 continue
             if any((n.type == 'variable_declarator' and n.child_by_field_name('value') is not None and (n.child_by_field_name('value').type == 'identifier') and (self.binding(text(self.data, n.child_by_field_name('value')), n.child_by_field_name('value')) == table_binding) for n in self.nodes)):
@@ -462,7 +507,13 @@ class Slice:
                     candidates.append((factory, call, table_decl))
         if len(candidates) != 1:
             return None
-        factory, dispatch, table_decl = candidates[0]
+        return candidates[0]
+
+    def webpack_external(self, function, args, seen):
+        found = self.webpack_factory(function, args)
+        if found is None:
+            return None
+        factory, dispatch, table_decl = found
         parameters = children(factory.child_by_field_name('parameters'))
         body = factory.child_by_field_name('body')
         statements = children(body)
@@ -553,10 +604,12 @@ def inspect_binding(data, focus_byte, api=None):
                             continue
                         if target and len(target) == 4 and (target[:3] == ('module', 'electron', 'ipcRenderer')) and (target[3] in ('send', 'sendSync', 'invoke', 'postMessage', 'on', 'once')):
                             actual = children(candidate.child_by_field_name('arguments'))
-                            channel = literal(data, actual[0]) if actual else None
+                            from .js_literals import resolve_string
+                            resolved_channel = resolve_string(model, actual[0]) if actual else None
+                            channel = resolved_channel['value'] if resolved_channel else None
                             if channel is None:
                                 model.reasons.add('dynamic_or_unsupported_channel_expression')
-                            result['selected_api']['ipc_calls'].append({'classification': 'computed', 'origin': list(target), 'channel': channel, 'channel_status': 'literal' if channel is not None else 'unresolved_expression', 'channel_expression': text(data, actual[0]) if actual else None, **model.loc(candidate)})
+                            result['selected_api']['ipc_calls'].append({'classification': 'computed', 'origin': list(target), 'channel': channel, 'channel_status': resolved_channel['basis'] if resolved_channel else 'unresolved_expression', 'channel_provenance': resolved_channel, 'channel_expression': text(data, actual[0]) if actual else None, **model.loc(candidate)})
                     if not result['selected_api']['ipc_calls']:
                         model.reasons.add('no_supported_direct_electron_ipc_call_resolved')
                 else:

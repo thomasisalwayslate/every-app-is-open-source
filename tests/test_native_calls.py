@@ -63,6 +63,30 @@ class NativeCallProvider(unittest.TestCase):
         with self.assertRaises(InterruptedError):provider(backend([]),time.monotonic()+1,lambda:True)('100','callees',8)
         with self.assertRaises(TimeoutError):provider(backend([]),time.monotonic()-1)('100','callees',8)
 
+    def test_inspected_partial_flow_retains_reason_without_preparation_loop(self):
+        items=[Instruction('104',Flow(call=True),['300'])]
+        for direction in ('callees','callers'):
+            for reason in ('Indirect jump unresolved; body incomplete',
+                           'Direct tail edge; target signature/control flow not recovered',
+                           'Control flow escapes candidate extent; safe complete body unavailable'):
+                b=backend(items,quick=True)
+                before=provider(b,time.monotonic()+1)('100',direction,8)
+                self.assertTrue(any('inspect this function explicitly' in r['reason'] for r in before['unresolved']))
+                b.function_readiness['100']={'state':'assembly_partial','limitations':[reason]}
+                after=provider(b,time.monotonic()+1)('100',direction,8)
+                self.assertFalse(after['complete'])
+                self.assertEqual(before['edges'],after['edges'])
+                self.assertTrue(any(reason in r['reason'] and 'Use assembly or explicitly choose full analysis' in r['reason'] for r in after['unresolved']))
+                self.assertFalse(any('inspect this function explicitly' in r['reason'] for r in after['unresolved']))
+
+    def test_prepared_flow_and_full_analysis_do_not_inherit_partial_guidance(self):
+        for quick,state in [(True,'flow_prepared'),(False,'assembly_partial')]:
+            b=backend([Instruction('104',Flow(call=True),['300'])],quick=quick)
+            b.function_readiness['100']={'state':state,'limitations':['Fixture partial reason']}
+            result=provider(b,time.monotonic()+1)('100','callees',8)
+            self.assertEqual(result['complete'],not quick)
+            self.assertFalse(any('partial assembly' in r['reason'] or 'Fixture partial reason' in r['reason'] for r in result['unresolved']))
+
     def test_unprepared_candidate_keeps_name_without_indexing_or_preparing(self):
         b = backend([], quick=True)
         b.program.getFunctionManager().getFunctionContaining = lambda _: None

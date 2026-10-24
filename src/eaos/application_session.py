@@ -39,6 +39,25 @@ class ApplicationSession(McpSession):
              'Selected-component coverage is not coverage of the entire application.'],
             {'application_snapshot':snapshot,'scope':'bounded_selected_root'})
         preview = json.loads(json.dumps(data))
+        if 'input_profiles' in preview:
+            # The immutable composed record retains the original profiles and
+            # limitations. Keep small answers usable instead of repeating those
+            # complete profiles on every result page.
+            for item in preview['input_profiles']:
+                original = item.pop('original_profile', {})
+                item.pop('original_analysis', None)
+                item.pop('original_limitations', None)
+                item.pop('complete_record_via', None)
+                item['profile_versions'] = {key: original[key] for key in
+                    ('binding_schema', 'module_schema') if key in original}
+                if 'parser' in original:
+                    item['profile_versions']['parser_index_schema'] = original['parser'].get('index_schema')
+                coverage = original.get('scope_coverage', original.get('coverage', {}))
+                item['scope_summary'] = {key: coverage[key] for key in
+                    ('scope_kind', 'selected_syntax_scan_complete', 'ancestor_syntax_scan_complete',
+                     'scope_index_complete', 'semantic_analysis_complete', 'whole_program_receiver_integrity')
+                    if key in coverage}
+                item['original_metadata_in_saved_evidence'] = True
         # Full immutable records stay on disk; inventory gaps and lexical strings
         # must not defeat the small-answer default or silently claim completeness.
         for container, key in ((preview,'relationships'),(preview,'unresolved'),(preview,'static_steps'),(preview.get('coverage',{}),'gaps'),
@@ -49,6 +68,10 @@ class ApplicationSession(McpSession):
                 container[key+'_truncated']=True
         for key in ('items','observations'):
             for row in preview.get(key,[]):
+                if 'relationship_schema' in preview:
+                    # Relationship pages already bound item bytes and source
+                    # spellings. Keep their node/edge identities intact.
+                    continue
                 if len(json.dumps(row))>1800:
                     retained = {name:row[name] for name in
                                 ('component_id','path','kind','size','sha256','line','source_offset',
@@ -69,7 +92,8 @@ class ApplicationSession(McpSession):
                       'view','matches','next_offset','coverage','resource_limits','binding_identity',
                       'binding_schema','focus','namespace','lexical_callee_origin','callee_origin',
                       'unresolved','unresolved_total','unresolved_truncated','module_scope',
-                      'module_view_identity','module_schema','scope_coverage','match_scope')}
+                      'module_view_identity','module_schema','scope_coverage','match_scope',
+                      'relationship_schema','input_evidence_ids')}
             preview.update(preview_omitted=True,
                            next='read_evidence with the returned id retrieves this page and its full coverage.')
         return {'classification':'computed','data':preview,'evidence':link,
@@ -95,7 +119,10 @@ class ApplicationSession(McpSession):
                     raise InterruptedError('Inventory cancelled; committed snapshots preserved')
                 return self._record(name,data,data['application_snapshot'])
             if name == 'inspect_javascript':
-                data = self.application.inspect_javascript(**arguments)
+                if 'relationship_evidence' in arguments:
+                    data = self._relationships(arguments, event)
+                else:
+                    data = self.application.inspect_javascript(**arguments)
                 if event.is_set():
                     raise InterruptedError('JavaScript inspection cancelled; captured bytes preserved')
                 return self._record(name,data,data['application_snapshot'])
@@ -135,6 +162,55 @@ class ApplicationSession(McpSession):
             with self.guard:
                 self.local_operation = None
                 self.application.cancelled = lambda: False
+
+    def _relationships(self, arguments, event):
+        from .js_relationships import project, RECORD_BYTES, TOTAL_BYTES
+
+        allowed = {'component_id', 'relationship_evidence', 'offset', 'limit', 'view'}
+        if arguments.keys() - allowed:
+            raise ValueError('Relationship projection is separate from other JavaScript inspection modes')
+        ids = arguments['relationship_evidence']
+        if len(set(ids)) != len(ids) or any(not re.fullmatch(r'[0-9a-f]{32}', value) for value in ids):
+            raise ValueError('Use distinct returned evidence ids, never paths')
+        root = self.application.capture(arguments['component_id'])
+        snapshot = root['application_snapshot']
+        evidence = Evidence(self.application._folder('evidence', snapshot), snapshot)
+        records, contexts, total = [], {}, 0
+
+        def context(captured):
+            if captured['source']['kind'] != 'javascript':
+                raise ValueError('Relationship inputs must be inventoried JavaScript components')
+            return {'component_id': captured['component_id'], 'application_snapshot': captured['application_snapshot'],
+                    'sha256': captured['sha256'], 'size': captured['source']['size']}
+
+        contexts[root['component_id']] = context(root)
+        for identifier in ids:
+            if event.is_set():
+                raise InterruptedError('Relationship projection cancelled; original evidence preserved')
+            size = (evidence.directory / (identifier + '.json')).stat().st_size
+            total += size
+            if size > RECORD_BYTES or total > TOTAL_BYTES:
+                raise ValueError('Selected evidence exceeds projection byte budget; use fewer/smaller original records')
+            parts, position = [], 0
+            while True:
+                if event.is_set():
+                    raise InterruptedError('Relationship projection cancelled; original evidence preserved')
+                page = evidence.read(identifier, offset=position, limit=40000)
+                parts.append(page['text'])
+                if page['next_offset'] is None:
+                    break
+                position = page['next_offset']
+            record = json.loads(''.join(parts))
+            component = record.get('data', {}).get('component_id')
+            if not component:
+                raise ValueError('Select original JavaScript inspection evidence with component identity')
+            if component not in contexts:
+                contexts[component] = context(self.application.capture(component))
+            records.append(record)
+        result = project(records, contexts, root['component_id'], offset=arguments.get('offset', 0),
+                         limit=arguments.get('limit', 20), view=arguments.get('view'), cancelled=event.is_set)
+        result['input_evidence_bytes'] = total
+        return result
 
     def call(self, name, arguments, request_id=None):
         validate_arguments(name,arguments)

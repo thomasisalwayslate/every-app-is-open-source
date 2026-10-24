@@ -13,7 +13,7 @@ import time
 
 from .js_syntax import SOURCE_LIMIT, location, text, literal, parser_identity
 
-MODULE_SCHEMA = 3
+MODULE_SCHEMA = 5
 HEADER_LIMIT = 4096
 BODY_LIMIT = 25000
 FUNCTIONS = {'function_declaration','function_expression','arrow_function',
@@ -88,6 +88,7 @@ def inspect_module(data, focus_byte, *, module_id=None, kind='declarations',
     if scan_root is None:
         raise ValueError('No bounded ancestor syntax scope')
     rows=[];nodes=0;pending=[(scan_root,0)];reason='end_of_scope';omissions=[]
+    conflicting_names=set();dynamic_scope=False;candidate_gaps=set()
     while pending:
         if nodes>=max_nodes:reason='node_budget';break
         if time.monotonic()>=deadline:reason='time_budget';break
@@ -99,9 +100,31 @@ def inspect_module(data, focus_byte, *, module_id=None, kind='declarations',
         if depth>256:reason='depth_budget';break
         nodes+=1
         node_kind=None if current.has_error else current.type
+        if node_kind in ('assignment_expression','augmented_assignment_expression','update_expression'):
+            target=current.child_by_field_name('left') or current.child_by_field_name('argument')
+            if target and target.type=='identifier':conflicting_names.add(text(data,target))
+            elif target and target.type not in ('member_expression','subscript_expression'):
+                candidate_gaps.add('unsupported_assignment_target')
+        if node_kind=='for_in_statement':
+            target=current.child_by_field_name('left')
+            if target and target.type=='identifier':conflicting_names.add(text(data,target))
+            elif target and target.type not in ('lexical_declaration','variable_declaration','member_expression','subscript_expression'):
+                candidate_gaps.add('unsupported_loop_target')
+        if node_kind=='identifier' and text(data,current)=='arguments':
+            candidate_gaps.add('implicit_arguments_alias_uncertainty')
+        if node_kind=='identifier' and text(data,current)=='eval':
+            candidate_gaps.add('eval_reference_scope_uncertainty')
+        if node_kind=='with_statement' or (node_kind=='call_expression' and text(data,current.child_by_field_name('function'))=='eval'):
+            dynamic_scope=True
+        if node_kind=='catch_clause':
+            parameter=current.child_by_field_name('parameter')
+            if parameter and parameter.type=='identifier':conflicting_names.add(text(data,parameter))
+            elif parameter:candidate_gaps.add('unsupported_catch_pattern')
         if node_kind=='variable_declarator':
             name=current.child_by_field_name('name');value=current.child_by_field_name('value')
+            if name and name.type!='identifier':candidate_gaps.add('unsupported_declaration_pattern')
             if name and name.type=='identifier':
+                conflicting_names.add(text(data,name))
                 row={'kind':'declarations','source_name':text(data,name),'initializer_type':value.type if value else None,
                      'initializer_source':text(data,value,256),
                      'initializer_source_omitted':bool(value and value.end_byte-value.start_byte>256),**loc(current)}
@@ -112,17 +135,25 @@ def inspect_module(data, focus_byte, *, module_id=None, kind='declarations',
                     if len(args)==1:
                         arg=literal(data,args[0]) if args[0].type=='string' else text(data,args[0],128) if args[0].type=='number' else None
                         if arg is not None:row['literal_call_argument']=arg
+                    parent=current.parent
+                    while parent and parent.type not in FUNCTIONS:parent=parent.parent
+                    row['initializer_in_selected_function']=parent==selected
                     row['relationship']='initializer syntax only; loader and alias bindings unresolved'
                 rows.append(row)
         elif node_kind in FUNCTIONS and current!=scan_root:
             name=current.child_by_field_name('name')
+            if name:conflicting_names.add(text(data,name))
             params=current.child_by_field_name('parameters')
             count=params.named_child_count if params else 0
+            for p in children(params):
+                if p.type=='identifier':conflicting_names.add(text(data,p))
+                else:candidate_gaps.add('unsupported_parameter_pattern')
             rows.append({'kind':'functions','source_name':text(data,name),'function_kind':current.type,
                          'parameters':[text(data,params.named_child(i),128) for i in range(min(8,count))],
                          'parameters_truncated':count>8,**loc(current)})
         elif node_kind in ('class_declaration','class'):
             name=current.child_by_field_name('name')
+            if name:conflicting_names.add(text(data,name))
             heritage=next((c for c in children(current) if c.type=='class_heritage'),None)
             rows.append({'kind':'functions','source_name':text(data,name),'function_kind':current.type,
                          'heritage_source':text(data,heritage,128),'relationship':'class syntax; inheritance and instance identity unresolved',**loc(current)})
@@ -152,6 +183,16 @@ def inspect_module(data, focus_byte, *, module_id=None, kind='declarations',
                 reason='pending_node_budget';break
         if reason=='pending_node_budget':break
     complete=not pending and reason=='end_of_scope'
+    formal_names=[text(data,p) for p in parameters if p.type=='identifier']
+    if parameter_count>8:candidate_gaps.add('selected_parameter_preview_incomplete')
+    for row in rows:
+        if row['kind']=='declarations' and 'literal_call_argument' in row:
+            callee=row.get('callee_source')
+            row['unshadowed_formal_call_candidate']=bool(not ancestors and complete and not selected.has_error
+                and not dynamic_scope and not candidate_gaps and row.get('initializer_in_selected_function')
+                and formal_names.count(callee)==1 and callee not in conflicting_names)
+            row['candidate_basis']=('single literal initializer call to a selected-function formal; loader identity, object mutations and excluded bodies remain unproved'
+                if row['unshadowed_formal_call_candidate'] else 'Formal-call candidate refused: local identity/write assumptions not established')
     filtered=[]
     for row in rows:
         if not ancestors and row['kind']!=kind:continue
@@ -174,6 +215,8 @@ def inspect_module(data, focus_byte, *, module_id=None, kind='declarations',
                 'role':'literal table-method candidate; webpack registration and runtime entry not established',
                 'parameters':[text(data,p,128) for p in parameters[:8]],'parameters_truncated':parameter_count>8,
                 'seed_focus_byte':focus_byte,'module_id_supplied':module_id},
+            'table_scope':loc(table),
+            'table_identity':hashlib.sha256(canonical({k:context[k] for k in ('source_sha256','namespace_context','table_span')})).hexdigest(),
             'view':expected,'items':filtered[offset:offset+limit],'matches':len(filtered),
             'match_scope':('ancestor skeleton syntax prefix' if ancestors else 'selected candidate syntax prefix')+' only; not semantic exports/functions/call coverage',
             'next_offset':offset+limit if offset+limit<len(filtered) else None,
@@ -185,7 +228,10 @@ def inspect_module(data, focus_byte, *, module_id=None, kind='declarations',
                 'omitted_scopes':omissions,
                 'header_entries_examined':examined,'header_entries_available':table.named_child_count,
                 'header_enumeration_complete':headers_complete,'unsupported_headers':unsupported,
+                'selected_key_count_in_examined_headers':sum(h['id']==selected_id for h in headers),
                 'unselected_bodies_examined':0,'ancestor_bindings_indexed':False,
+                'dynamic_scope_syntax':dynamic_scope,
+                'formal_candidate_gaps':sorted(candidate_gaps),
                 'global_parse_errors':tree.root_node.has_error,'selected_parse_errors':selected.has_error,
                 'whole_program_receiver_integrity':False,'semantic_analysis_complete':False},
             'module_header_preview':headers[:8],'module_header_preview_truncated':len(headers)>8 or not headers_complete,

@@ -98,7 +98,7 @@ def project(records, contexts, root_component, *, offset=0, limit=20, view=None,
                          'complete_record_via': {'tool': 'read_evidence', 'id': record['id']}})
         scope = data.get('module_scope')
         if scope:
-            if data.get('module_schema') != 5 or not data.get('table_identity') or not data.get('table_scope'):
+            if data.get('module_schema') != 7 or not data.get('table_identity') or not data.get('table_scope'):
                 raise ValueError('Module evidence lacks current table identity; re-inspect module_at before composing')
             expected_table = digest({'source_sha256': context['sha256'],
                                      'namespace_context': {'application_snapshot': snapshot, 'component_id': component},
@@ -122,7 +122,7 @@ def project(records, contexts, root_component, *, offset=0, limit=20, view=None,
                     module_nodes[table_key] = anchor
         for row in data.get('items', []) + data.get('observations', []):
             fields = {k: row[k] for k in ('kind', 'source_name', 'initializer_source', 'literal_call_argument',
-                      'unshadowed_formal_call_candidate', 'candidate_basis', 'target_source', 'value_source',
+                      'unshadowed_formal_call_candidate', 'candidate_basis', 'formal_origin', 'target_source', 'value_source',
                       'callee_source', 'receiver_source', 'argument_sources', 'argument_count',
                       'arguments_truncated', 'heritage_source', 'function_kind', 'method', 'receiver',
                       'literal_argument', 'argument_status', 'argument_expression', 'module',
@@ -194,7 +194,8 @@ def project(records, contexts, root_component, *, offset=0, limit=20, view=None,
             continue
         link({'kind': 'relationship', 'classification': 'computed',
                       'from': node['node_id'], 'to': target['node_id'], 'status': 'candidate_only',
-                      'basis': 'One literal initializer call to an unshadowed/unwritten formal in the selected function; literal token matches a selected header in this same source table.',
+                      'basis': row['candidate_basis']+' Literal token matches a selected header in this same source table.',
+                      'formal_origin': row['formal_origin'],
                       'basis_evidence_ids': [record['id'], target['evidence_id']],
                       'unresolved': ['Formal-to-loader binding is not established.',
                                      'Factory/table replacement and effects of omitted modules are unproved.',

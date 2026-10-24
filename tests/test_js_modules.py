@@ -150,3 +150,101 @@ class SelectedModules(unittest.TestCase):
                     with self.assertRaises((ValueError,RuntimeError)):s.call('inspect_javascript',dict(component_id=cid,**bad))
                 validate_arguments('inspect_javascript',{'component_id':cid,'module_at':FOCUS,'module_kind':'ancestors'})
             finally:s.close()
+
+    def test_unrelated_nested_bindings_do_not_taint_selected_formal(self):
+        prefixes=[
+            b'function other(importer){importer=local;}',
+            b'function other(){var importer;importer=local;}',
+            b'{let importer=local;importer=other;}',
+            b'try{}catch(importer){importer=local;}',
+            b'class Helper{method(importer){importer=local;}}',
+            b'const other=(importer)=>{importer=local;};',
+            b'const other=importer=>{importer=local;};',
+            b'const other=class importer{method(){return importer;}};',
+            b'for(let importer of values){importer=local;}',
+        ]
+        for prefix in prefixes:
+            with self.subTest(prefix=prefix):
+                raw=b'(()=>{const factories={12(mod,out,importer){'+prefix+b"const item=importer(34);out.value=item;},34(mod){mod.exports='own';}}})();"
+                r=inspect_module(raw,raw.index(b'out.value'))
+                self.assertFalse(r['scope_coverage']['selected_parse_errors'])
+                row=next(x for x in r['items'] if x['source_name']=='item')
+                self.assertTrue(row['unshadowed_formal_call_candidate'],r['scope_coverage'])
+                origin=row['formal_origin']
+                self.assertEqual(origin['classification'],'computed')
+                for kind in ('parameter','reference'):
+                    span=origin[kind]
+                    self.assertEqual(raw[span['start_byte']:span['end_byte']],b'importer')
+                self.assertFalse(r['scope_coverage']['semantic_analysis_complete'])
+
+    def test_actual_closure_writes_block_shadowing_and_hoisting_stay_refused(self):
+        prefixes=[
+            b'function later(){importer=other;}',
+            b'const later=()=>{importer++;};',
+            b'class Helper{method(){importer=other;}}',
+            b'for(importer of values){}',
+            b'var importer=other;',
+            b'if(flag){function importer(){}}',
+            b'({importer}=other);',
+            b'arguments[2]=other;',
+            b'(eval)(code);',
+            b'const obj={[importer=other](importer){}};',
+        ]
+        for prefix in prefixes:
+            with self.subTest(prefix=prefix):
+                raw=b'(()=>{const factories={12(mod,out,importer){'+prefix+b"const item=importer(34);out.value=item;},34(mod){mod.exports='own';}}})();"
+                r=inspect_module(raw,raw.index(b'out.value'))
+                row=next(x for x in r['items'] if x['source_name']=='item')
+                self.assertFalse(row['unshadowed_formal_call_candidate'])
+                self.assertNotIn('formal_origin',row)
+        raw=b"(()=>{const table={1(m,e,importer){{const importer=other;const item=importer(34);}e.ok=true;}}})();"
+        r=inspect_module(raw,raw.index(b'e.ok'))
+        self.assertFalse(next(x for x in r['items'] if x['source_name']=='item')['unshadowed_formal_call_candidate'])
+
+    def test_flat_declaration_aliases_and_rest_bind_only_their_own_names(self):
+        prefixes=[
+            b'const {one:local,two}=source;',
+            b'const {"quoted-key":local}=source;',
+            b'function other(...importer){importer=[];}',
+            b'const other=(...importer)=>{importer=[];};',
+            b'function other(){let {one:importer}=source;importer=local;}',
+            b'{let {one:importer}=source;importer=other;}',
+        ]
+        for prefix in prefixes:
+            with self.subTest(prefix=prefix):
+                raw=b'(()=>{const factories={12(mod,out,importer){'+prefix+b"const item=importer(34);out.value=item;},34(mod){mod.exports='own';}}})();"
+                r=inspect_module(raw,raw.index(b'out.value'))
+                self.assertTrue(next(x for x in r['items'] if x['source_name']=='item')['unshadowed_formal_call_candidate'],r['scope_coverage'])
+                self.assertFalse(r['scope_coverage']['semantic_analysis_complete'])
+
+    def test_bound_formal_and_uncertain_patterns_are_not_promoted(self):
+        prefixes=[
+            b'const {one:importer}=source;',
+            b'var {one:importer}=source;',
+            b'({one:importer}=source);',
+            b'const {one:local=other}=source;',
+            b'const {one:{local}}=source;',
+            b'const {[key]:local}=source;',
+            b'const {...rest}=source;',
+            b'function other(...rest){importer=other;}',
+            b'function other({value}){}',
+            b'const {one:local}=(importer=other);',
+        ]
+        for prefix in prefixes:
+            with self.subTest(prefix=prefix):
+                raw=b'(()=>{const factories={12(mod,out,importer){'+prefix+b"const item=importer(34);out.value=item;},34(mod){mod.exports='own';}}})();"
+                r=inspect_module(raw,raw.index(b'out.value'))
+                self.assertFalse(next(x for x in r['items'] if x['source_name']=='item')['unshadowed_formal_call_candidate'])
+        raw=b"(()=>{const table={1(m,e,...importer){const item=importer(2);e.item=item;},2(m){m.exports='own';}}})();"
+        r=inspect_module(raw,raw.index(b'e.item'))
+        self.assertFalse(next(x for x in r['items'] if x['source_name']=='item')['unshadowed_formal_call_candidate'])
+
+    def test_unfinished_formal_analysis_does_not_reuse_complete_syntax_label(self):
+        from unittest.mock import patch
+        raw=b"(()=>{const t={1(m,e,load){const value=load(2);e.value=value;},2(m){m.exports='own';}}})();"
+        with patch('eaos.js_modules.FormalOwnership.prepare_writes',return_value=False):
+            r=inspect_module(raw,raw.index(b'e.value'))
+        self.assertTrue(r['scope_coverage']['selected_syntax_scan_complete'])
+        self.assertFalse(r['scope_coverage']['formal_ownership_analysis_complete'])
+        self.assertIn('formal_ownership_time_budget',r['scope_coverage']['formal_candidate_gaps'])
+        self.assertFalse(next(x for x in r['items'] if x['source_name']=='value')['unshadowed_formal_call_candidate'])

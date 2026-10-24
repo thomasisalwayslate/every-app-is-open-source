@@ -39,12 +39,12 @@ class Relationships(unittest.TestCase):
         self.assertIn('Formal-to-loader',links[0]['unresolved'][0])
         self.assertEqual(r['data']['coverage']['IPC_edges_established'],0)
         profiles=r['data']['input_profiles']
-        self.assertEqual(profiles[0]['profile_versions']['module_schema'],5)
+        self.assertEqual(profiles[0]['profile_versions']['module_schema'],7)
         self.assertFalse(profiles[0]['scope_summary']['semantic_analysis_complete'])
         self.assertTrue(profiles[0]['original_metadata_in_saved_evidence'])
         saved=self.session.call('read_evidence',{'id':r['evidence']['id'],'limit':40000})
         full=json.loads(saved['text'])['data']['input_profiles'][0]
-        self.assertTrue(full['original_profile']['module_schema']==5)
+        self.assertTrue(full['original_profile']['module_schema']==7)
         self.assertTrue(full['original_limitations'])
         self.session.close()
         reopened=ApplicationSession(self.root,self.base/'cache');self.addCleanup(reopened.close)
@@ -137,7 +137,7 @@ class Relationships(unittest.TestCase):
         for key in ('source_sha256','application_snapshot','table_identity'):
             bad=copy.deepcopy(records);bad[0]['data'][key]='wrong'
             with self.assertRaises(ValueError):project(bad,contexts,self.cid)
-        bad=copy.deepcopy(records);bad[0]['data']['module_schema']=4
+        bad=copy.deepcopy(records);bad[0]['data']['module_schema']=6
         with self.assertRaisesRegex(ValueError,'table identity'):project(bad,contexts,self.cid)
 
     def test_mutated_preload_receiver_never_promotes_a_binding(self):

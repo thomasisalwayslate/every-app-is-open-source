@@ -13,7 +13,7 @@ import time
 
 from .js_syntax import SOURCE_LIMIT, location, text, literal, parser_identity
 
-MODULE_SCHEMA = 5
+MODULE_SCHEMA = 7
 HEADER_LIMIT = 4096
 BODY_LIMIT = 25000
 FUNCTIONS = {'function_declaration','function_expression','arrow_function',
@@ -30,6 +30,161 @@ def identifier(data, entry):
         return None
     value = literal(data,name) if name.type=='string' else text(data,name,128)
     return value if value is not None and len(value)<=128 else None
+
+
+def node_key(node):
+    return (node.start_byte, node.end_byte, node.type) if node else None
+
+
+def binding_names(pattern, *, flat_object=False, simple_rest=False):
+    """Names only: never infer destructured values, getters or default effects."""
+    if pattern is None:
+        return []
+    if pattern.type in ('identifier', 'shorthand_property_identifier_pattern'):
+        return [pattern]
+    if simple_rest and pattern.type == 'rest_pattern' and pattern.named_child_count == 1:
+        child = pattern.named_child(0)
+        return [child] if child.type == 'identifier' else None
+    if flat_object and pattern.type == 'object_pattern' and pattern.named_child_count <= 64:
+        names = []
+        for item in children(pattern):
+            if item.type == 'comment':
+                continue
+            if item.type == 'shorthand_property_identifier_pattern':
+                names.append(item)
+            elif item.type == 'pair_pattern':
+                prop = item.child_by_field_name('key')
+                value = item.child_by_field_name('value')
+                if (prop is None or prop.type not in ('property_identifier', 'string', 'number')
+                        or value is None or value.type != 'identifier'):
+                    return None
+                names.append(value)
+            else:
+                return None
+        return names
+    return None
+
+
+class FormalOwnership:
+    """Lexical ownership only within the already bounded syntax traversal.
+
+    No value propagation, module resolution or omitted-scope mutation claims.
+    Unsupported patterns/eval/arguments remain independent refusal conditions.
+    """
+    SCOPE_NODES = FUNCTIONS | {'program', 'statement_block', 'catch_clause',
+                               'for_statement', 'for_in_statement', 'switch_body',
+                               'class', 'class_declaration', 'class_body'}
+
+    def __init__(self, data, selected):
+        self.data, self.selected = data, node_key(selected)
+        self.scopes, self.at, self.writes, self.gaps = {}, {}, [], set()
+        self.written = None
+
+    def declare(self, scope, name, kind, node):
+        if scope is not None and name is not None and name.type in ('identifier', 'shorthand_property_identifier_pattern'):
+            spelling = text(self.data, name)
+            if spelling:
+                self.scopes[scope]['bindings'].setdefault(spelling, []).append((kind, node))
+
+    def function_scope(self, scope):
+        while scope is not None:
+            if self.scopes[scope]['node'].type in FUNCTIONS | {'program'}:
+                return scope
+            scope = self.scopes[scope]['parent']
+        return None
+
+    def visit(self, node, scope):
+        name = node.child_by_field_name('name')
+        if node.type in ('function_declaration', 'class_declaration'):
+            self.declare(scope, name, 'declaration', node)
+            if node.type == 'function_declaration' and self.function_scope(scope) == self.selected:
+                body = self.scopes[self.selected]['node'].child_by_field_name('body')
+                if self.scopes[scope]['node'] != body:
+                    self.gaps.add('block_function_hoisting_uncertainty')
+        if node.type in self.SCOPE_NODES:
+            parent = scope
+            scope = node_key(node)
+            self.scopes[scope] = {'parent': parent, 'node': node, 'bindings': {}}
+            if node.type in FUNCTIONS:
+                parameters = children(node.child_by_field_name('parameters'))
+                single = node.child_by_field_name('parameter')
+                if single is not None:
+                    parameters.append(single)
+                for parameter in parameters:
+                    names = binding_names(parameter, simple_rest=True)
+                    if names is None:
+                        self.gaps.add('unsupported_parameter_pattern')
+                    else:
+                        kind = 'rest_parameter' if parameter.type == 'rest_pattern' else 'parameter'
+                        for bound in names:
+                            self.declare(scope, bound, kind, bound)
+                if node.type != 'function_declaration':
+                    self.declare(scope, name, 'self_name', node)
+            elif node.type == 'catch_clause':
+                parameter = node.child_by_field_name('parameter')
+                self.declare(scope, parameter, 'catch', parameter)
+            elif node.type == 'class':
+                self.declare(scope, name, 'self_name', node)
+        self.at[node_key(node)] = scope
+        if node.type == 'variable_declarator':
+            owner = scope
+            if node.parent and node.parent.type == 'variable_declaration':
+                owner = self.function_scope(owner)
+            names = binding_names(name, flat_object=True)
+            if names is None:
+                self.gaps.add('unsupported_declaration_pattern')
+            else:
+                for declared in names:
+                    self.declare(owner, declared, 'variable', node)
+        if node.type in ('assignment_expression', 'augmented_assignment_expression', 'update_expression'):
+            target = node.child_by_field_name('left') or node.child_by_field_name('argument')
+            if target is not None and target.type == 'identifier':
+                self.writes.append(target)
+        if node.type == 'for_in_statement':
+            target = node.child_by_field_name('left')
+            if target is not None and target.type == 'identifier':
+                kind = text(self.data, node.child_by_field_name('kind'))
+                if kind in ('let', 'const', 'var'):
+                    owner = self.function_scope(scope) if kind == 'var' else scope
+                    self.declare(owner, target, 'loop_variable', target)
+                else:
+                    self.writes.append(target)
+        return scope
+
+    def binding(self, reference):
+        if reference is None or reference.type != 'identifier':
+            return None
+        name = text(self.data, reference)
+        scope = self.at.get(node_key(reference))
+        while scope is not None:
+            if name in self.scopes[scope]['bindings']:
+                return scope, name
+            scope = self.scopes[scope]['parent']
+        return None
+
+    def selected_formal(self, reference):
+        if self.written is None:
+            return None
+        owner = self.binding(reference)
+        if owner is None or owner[0] != self.selected:
+            return None
+        declarations = self.scopes[owner[0]]['bindings'][owner[1]]
+        if len(declarations) != 1 or declarations[0][0] != 'parameter':
+            return None
+        if owner in self.written:
+            return None
+        return declarations[0][1]
+
+    def prepare_writes(self, deadline):
+        written = set()
+        for reference in self.writes:
+            if time.monotonic() >= deadline:
+                return False
+            owner = self.binding(reference)
+            if owner is not None:
+                written.add(owner)
+        self.written = written
+        return time.monotonic() < deadline
 
 
 def inspect_module(data, focus_byte, *, module_id=None, kind='declarations',
@@ -87,44 +242,43 @@ def inspect_module(data, focus_byte, *, module_id=None, kind='declarations',
     scan_root=ancestor_scope if ancestors else selected
     if scan_root is None:
         raise ValueError('No bounded ancestor syntax scope')
-    rows=[];nodes=0;pending=[(scan_root,0)];reason='end_of_scope';omissions=[]
-    conflicting_names=set();dynamic_scope=False;candidate_gaps=set()
+    rows=[];nodes=0;pending=[(scan_root,0,None)];reason='end_of_scope';omissions=[]
+    dynamic_scope=False;candidate_gaps=set();ownership=FormalOwnership(data,selected);candidate_references=[]
     while pending:
         if nodes>=max_nodes:reason='node_budget';break
         if time.monotonic()>=deadline:reason='time_budget';break
-        current,depth=pending.pop()
+        current,depth,parent_scope=pending.pop()
         if ancestors and current==table:
             omissions.append({'reason':'module_table_bodies_excluded',
                               'entries_available':table.named_child_count,**loc(table)})
             continue
         if depth>256:reason='depth_budget';break
         nodes+=1
+        scope=ownership.visit(current,parent_scope)
         node_kind=None if current.has_error else current.type
         if node_kind in ('assignment_expression','augmented_assignment_expression','update_expression'):
             target=current.child_by_field_name('left') or current.child_by_field_name('argument')
-            if target and target.type=='identifier':conflicting_names.add(text(data,target))
-            elif target and target.type not in ('member_expression','subscript_expression'):
+            if target and target.type not in ('identifier','member_expression','subscript_expression'):
                 candidate_gaps.add('unsupported_assignment_target')
         if node_kind=='for_in_statement':
             target=current.child_by_field_name('left')
-            if target and target.type=='identifier':conflicting_names.add(text(data,target))
-            elif target and target.type not in ('lexical_declaration','variable_declaration','member_expression','subscript_expression'):
+            if target and target.type not in ('identifier','lexical_declaration','variable_declaration','member_expression','subscript_expression'):
                 candidate_gaps.add('unsupported_loop_target')
         if node_kind=='identifier' and text(data,current)=='arguments':
             candidate_gaps.add('implicit_arguments_alias_uncertainty')
         if node_kind=='identifier' and text(data,current)=='eval':
             candidate_gaps.add('eval_reference_scope_uncertainty')
+        if node_kind=='computed_property_name':
+            candidate_gaps.add('computed_name_evaluation_scope_uncertainty')
         if node_kind=='with_statement' or (node_kind=='call_expression' and text(data,current.child_by_field_name('function'))=='eval'):
             dynamic_scope=True
         if node_kind=='catch_clause':
             parameter=current.child_by_field_name('parameter')
-            if parameter and parameter.type=='identifier':conflicting_names.add(text(data,parameter))
-            elif parameter:candidate_gaps.add('unsupported_catch_pattern')
+            if parameter and parameter.type!='identifier':candidate_gaps.add('unsupported_catch_pattern')
         if node_kind=='variable_declarator':
             name=current.child_by_field_name('name');value=current.child_by_field_name('value')
-            if name and name.type!='identifier':candidate_gaps.add('unsupported_declaration_pattern')
+            if binding_names(name,flat_object=True) is None:candidate_gaps.add('unsupported_declaration_pattern')
             if name and name.type=='identifier':
-                conflicting_names.add(text(data,name))
                 row={'kind':'declarations','source_name':text(data,name),'initializer_type':value.type if value else None,
                      'initializer_source':text(data,value,256),
                      'initializer_source_omitted':bool(value and value.end_byte-value.start_byte>256),**loc(current)}
@@ -132,6 +286,7 @@ def inspect_module(data, focus_byte, *, module_id=None, kind='declarations',
                     args=children(value.child_by_field_name('arguments'))
                     callee=value.child_by_field_name('function')
                     row['callee_source']=text(data,callee,128)
+                    candidate_references.append((row,callee))
                     if len(args)==1:
                         arg=literal(data,args[0]) if args[0].type=='string' else text(data,args[0],128) if args[0].type=='number' else None
                         if arg is not None:row['literal_call_argument']=arg
@@ -142,18 +297,15 @@ def inspect_module(data, focus_byte, *, module_id=None, kind='declarations',
                 rows.append(row)
         elif node_kind in FUNCTIONS and current!=scan_root:
             name=current.child_by_field_name('name')
-            if name:conflicting_names.add(text(data,name))
             params=current.child_by_field_name('parameters')
             count=params.named_child_count if params else 0
             for p in children(params):
-                if p.type=='identifier':conflicting_names.add(text(data,p))
-                else:candidate_gaps.add('unsupported_parameter_pattern')
+                if binding_names(p,simple_rest=True) is None:candidate_gaps.add('unsupported_parameter_pattern')
             rows.append({'kind':'functions','source_name':text(data,name),'function_kind':current.type,
                          'parameters':[text(data,params.named_child(i),128) for i in range(min(8,count))],
                          'parameters_truncated':count>8,**loc(current)})
         elif node_kind in ('class_declaration','class'):
             name=current.child_by_field_name('name')
-            if name:conflicting_names.add(text(data,name))
             heritage=next((c for c in children(current) if c.type=='class_heritage'),None)
             rows.append({'kind':'functions','source_name':text(data,name),'function_kind':current.type,
                          'heritage_source':text(data,heritage,128),'relationship':'class syntax; inheritance and instance identity unresolved',**loc(current)})
@@ -178,21 +330,34 @@ def inspect_module(data, focus_byte, *, module_id=None, kind='declarations',
                          'callee_source_omitted':bool(fn and fn.end_byte-fn.start_byte>128),
                          'relationship':'call syntax only; dispatch and receiver binding unresolved',**loc(current)})
         for i in range(current.named_child_count-1,-1,-1):
-            pending.append((current.named_child(i),depth+1))
+            pending.append((current.named_child(i),depth+1,scope))
             if len(pending)>max_nodes:
                 reason='pending_node_budget';break
         if reason=='pending_node_budget':break
     complete=not pending and reason=='end_of_scope'
-    formal_names=[text(data,p) for p in parameters if p.type=='identifier']
+    candidate_gaps.update(ownership.gaps)
+    ownership_ready=bool(complete and not ancestors and ownership.prepare_writes(deadline))
+    if complete and not ancestors and not ownership_ready:candidate_gaps.add('formal_ownership_time_budget')
     if parameter_count>8:candidate_gaps.add('selected_parameter_preview_incomplete')
-    for row in rows:
-        if row['kind']=='declarations' and 'literal_call_argument' in row:
-            callee=row.get('callee_source')
+    if any(binding_names(p,simple_rest=True) is None for p in parameters):candidate_gaps.add('unsupported_selected_parameter_pattern')
+    for row,reference in candidate_references:
+        if 'literal_call_argument' in row:
+            if time.monotonic()>=deadline:
+                candidate_gaps.add('formal_ownership_time_budget');ownership_ready=False
+            formal=ownership.selected_formal(reference) if ownership_ready else None
             row['unshadowed_formal_call_candidate']=bool(not ancestors and complete and not selected.has_error
                 and not dynamic_scope and not candidate_gaps and row.get('initializer_in_selected_function')
-                and formal_names.count(callee)==1 and callee not in conflicting_names)
-            row['candidate_basis']=('single literal initializer call to a selected-function formal; loader identity, object mutations and excluded bodies remain unproved'
+                and formal is not None)
+            if row['unshadowed_formal_call_candidate']:
+                row['formal_origin']={'classification':'computed','parameter':loc(formal),'function':loc(selected),'reference':loc(reference)}
+            row['candidate_basis']=('literal initializer call lexically owned by the selected function formal, with no writes to that binding in the complete bounded body; loader identity, object mutations and excluded bodies remain unproved'
                 if row['unshadowed_formal_call_candidate'] else 'Formal-call candidate refused: local identity/write assumptions not established')
+    if not ownership_ready:
+        for row,reference in candidate_references:
+            if 'unshadowed_formal_call_candidate' in row:
+                row['unshadowed_formal_call_candidate']=False
+                row.pop('formal_origin',None)
+                row['candidate_basis']='Formal-call candidate refused: local identity/write assumptions not established'
     filtered=[]
     for row in rows:
         if not ancestors and row['kind']!=kind:continue
@@ -232,6 +397,7 @@ def inspect_module(data, focus_byte, *, module_id=None, kind='declarations',
                 'unselected_bodies_examined':0,'ancestor_bindings_indexed':False,
                 'dynamic_scope_syntax':dynamic_scope,
                 'formal_candidate_gaps':sorted(candidate_gaps),
+                'formal_ownership_analysis_complete':ownership_ready and not candidate_gaps,
                 'global_parse_errors':tree.root_node.has_error,'selected_parse_errors':selected.has_error,
                 'whole_program_receiver_integrity':False,'semantic_analysis_complete':False},
             'module_header_preview':headers[:8],'module_header_preview_truncated':len(headers)>8 or not headers_complete,

@@ -1,11 +1,11 @@
 # Connect an MCP client
 
-Run setup and compile the example in [SETUP.md](SETUP.md) first. Replace `/absolute/path/to/program` with the selected standalone binary; it stays fixed for that session. An application-directory session can explicitly select one inventoried native component at a time within its fixed root. These commands target 0.1.9. For local wheel checks, replace the `--from` value with the absolute wheel path.
+Run setup and compile the example in [SETUP.md](SETUP.md) first. Replace `/absolute/path/to/program` with the selected standalone binary; it stays fixed for that session. An application-directory session can explicitly select one inventoried native component at a time within its fixed root. These commands target 0.2.0; before publication use a reviewed local wheel. For local wheel checks, replace the `--from` value with the absolute wheel path.
 
 ## Claude Code
 
 ```sh
-claude mcp add --transport stdio --scope local eaos -- uvx --python 3.13 --from every-app-is-open-source==0.1.9 eaos mcp /absolute/path/to/program
+claude mcp add --transport stdio --scope local eaos -- uvx --python 3.13 --from every-app-is-open-source==0.2.0 eaos mcp /absolute/path/to/program
 claude mcp get eaos
 ```
 
@@ -14,7 +14,7 @@ This is a deliberate client configuration change made by you, separate from EAOS
 ## Codex
 
 ```sh
-codex mcp add eaos -- uvx --python 3.13 --from every-app-is-open-source==0.1.9 eaos mcp /absolute/path/to/program
+codex mcp add eaos -- uvx --python 3.13 --from every-app-is-open-source==0.2.0 eaos mcp /absolute/path/to/program
 codex mcp get eaos
 ```
 
@@ -23,7 +23,7 @@ Equivalent TOML in your Codex config (use an absolute `uvx` command path if need
 ```toml
 [mcp_servers.eaos]
 command = "uvx"
-args = ["--python", "3.13", "--from", "every-app-is-open-source==0.1.9", "eaos", "mcp", "/absolute/path/to/program"]
+args = ["--python", "3.13", "--from", "every-app-is-open-source==0.2.0", "eaos", "mcp", "/absolute/path/to/program"]
 startup_timeout_sec = 30
 tool_timeout_sec = 180
 ```
@@ -37,7 +37,7 @@ These configuration commands do not require a particular model. The historical b
   "mcpServers": {
     "eaos": {
       "command": "uvx",
-      "args": ["--python", "3.13", "--from", "every-app-is-open-source==0.1.9", "eaos", "mcp", "/absolute/path/to/program"]
+      "args": ["--python", "3.13", "--from", "every-app-is-open-source==0.2.0", "eaos", "mcp", "/absolute/path/to/program"]
     }
   }
 }
@@ -51,7 +51,7 @@ A schema is available through `tools/list`; inputs are validated by the server b
 
 Replace the standalone binary with the application root and append `--workspace /absolute/path/outside-bundles/eaos-workspace` to the MCP command. The workspace must be outside the selected root and all bundles. Check for eleven tools. Start with `inventory_application`; choose a returned native `component_id` with `select_component`, then use `open_program`, `search`, `inspect` and `trace_calls` for that one component. Inventory alone does not start native analysis.
 
-For a JavaScript component, use `inspect_javascript` directly by its inventory ID. It performs bounded lexical inspection, not execution, module resolution or IPC-graph recovery. Follow returned views and offsets, and use `read_evidence` when a compact preview is omitted. Reselect a native component to read its earlier native evidence. See [setup](SETUP.md#application-directory-workflow) for limits and cache behavior.
+For a JavaScript component, use `inspect_javascript` directly by its inventory ID. Published 0.1.9 performs bounded lexical inspection. 0.2.0 profiles add coherent parsing, explicit syntax continuation, focused preload/module views and composition of selected saved inspection ids. Preserve source-only candidates and the original scope/limitations; these profiles do not establish a complete IPC graph or execute the application. Follow returned views and offsets, and use `read_evidence` when a compact preview is omitted. Reselect a native component to read its earlier native evidence. See [setup](SETUP.md#application-directory-workflow) for limits and cache behavior.
 
 ## Ask about a running analysis
 

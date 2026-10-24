@@ -5,10 +5,10 @@ Supported: Apple Silicon macOS, Python 3.13 (uv selects it), uv, and Apple's Com
 Install the package and prepare its native runtimes:
 
 ```sh
-uvx --python 3.13 --from every-app-is-open-source==0.1.9 eaos setup
+uvx --python 3.13 --from every-app-is-open-source==0.2.0 eaos setup
 ```
 
-To test a reviewed local wheel instead, use `uvx --python 3.13 --from /absolute/path/to/every_app_is_open_source-0.1.9-py3-none-any.whl eaos setup`.
+To test a reviewed local wheel instead, use `uvx --python 3.13 --from /absolute/path/to/every_app_is_open_source-0.2.0-py3-none-any.whl eaos setup`.
 
 ## What setup runs and downloads
 
@@ -43,7 +43,7 @@ For standalone native analysis, copy the executable out of an installed `.app` f
 ```sh
 eaos_case="$(mktemp -d /tmp/eaos-app.XXXXXX)"
 cp /absolute/path/Example.app/Contents/MacOS/Example "$eaos_case/Example"
-uvx --python 3.13 --from every-app-is-open-source==0.1.9 eaos call "$eaos_case/Example" open_program
+uvx --python 3.13 --from every-app-is-open-source==0.2.0 eaos call "$eaos_case/Example" open_program
 ```
 
 Keep the copy and its adjacent evidence directory together. A universal executable (check with `lipo -archs`) needs no manual thinning: 0.1.7 selects the ARM64 slice automatically, or use `--architecture` to choose one explicitly (see [analysis options](#017-analysis-options)). An app's main executable may depend on frameworks and resources that are separate analysis targets.
@@ -52,7 +52,7 @@ Initial analysis of a large program can take many minutes. In MCP, `open_program
 
 ## Upgrading
 
-Run the current setup command (`eaos setup` from `every-app-is-open-source==0.1.9`) once after upgrading, using the same `EAOS_RUNTIME_DIR` as your client, then restart the MCP client/server. Setup reuses an already installed runtime of the same pinned version instead of downloading it again. A server that already failed initialization needs that restart.
+Run the current setup command (`eaos setup` from `every-app-is-open-source==0.2.0`) once after upgrading, using the same `EAOS_RUNTIME_DIR` as your client, then restart the MCP client/server. Setup reuses an already installed runtime of the same pinned version instead of downloading it again. A server that already failed initialization needs that restart.
 
 Projects made before 0.1.7 are preserved but not reused: 0.1.7 creates a new project under `profiles/` on first open, so expect one fresh analysis per program. Old projects and evidence are left in place, not migrated or deleted.
 
@@ -62,11 +62,11 @@ Projects made before 0.1.7 are preserved but not reused: 0.1.7 creates a new pro
 
 ## 0.1.7 analysis options
 
-These options were introduced in 0.1.7 and remain available in 0.1.9 after setup:
+These options were introduced in 0.1.7 and remain available in 0.2.0 after setup:
 
 ```sh
-uvx --python 3.13 --from every-app-is-open-source==0.1.9 eaos call /absolute/path/to/program open_program --architecture arm64 --analysis-mode quick
-uvx --python 3.13 --from every-app-is-open-source==0.1.9 eaos mcp /absolute/path/to/program --analysis-mode quick
+uvx --python 3.13 --from every-app-is-open-source==0.2.0 eaos call /absolute/path/to/program open_program --architecture arm64 --analysis-mode quick
+uvx --python 3.13 --from every-app-is-open-source==0.2.0 eaos mcp /absolute/path/to/program --analysis-mode quick
 ```
 
 Full analysis remains the default. Quick mode supports 64-bit ARM/x86 Mach-O. It imports the selected image, recovers available Objective-C metadata and loader-provided names, and searches bounded literal bytes. It does not run whole-program analysis or recover every Swift name. Individual inspections prepare bounded reachable instructions; unresolved indirect jumps, tail edges or unsafe boundaries can leave assembly only or refuse the request. Every affected response reports coverage; missing matches/references do not prove absence.
@@ -86,17 +86,17 @@ CLI/MCP defaults are a 3,600-second initialization deadline and a 120-second nat
 
 ## Application-directory workflow
 
-0.1.9 adds selected-root inventory and explicit component inspection. Configure the native runtimes with setup first; no additional dependencies are required for this workflow. It does not integrate a separate app or change any client configuration automatically:
+0.1.9 introduced selected-root inventory and explicit component inspection. Configure the native runtimes with setup first; no additional dependencies are required for this workflow. It does not integrate a separate app or change any client configuration automatically:
 
 ```sh
-uvx --python 3.13 --from every-app-is-open-source==0.1.9 eaos mcp /Applications/YourApp.app --workspace /absolute/path/outside-bundles/analysis
+uvx --python 3.13 --from every-app-is-open-source==0.2.0 eaos mcp /Applications/YourApp.app --workspace /absolute/path/outside-bundles/analysis
 ```
 
 In that persistent MCP session, call `inventory_application`, then `select_component` with an inventory-returned native component ID. `open_program` starts/checks analysis; full remains default. Use `analysis_mode="quick"` explicitly when partial metadata is sufficient. `search`, `inspect` and `trace_calls` operate on that one selected component. For inventoried JavaScript, use `inspect_javascript` with its component ID instead of selecting it as native. No target program or JavaScript is executed.
 
 Native sessions expose eight tools; application sessions expose eleven. The workspace contains immutable inventory snapshots, component captures, evidence and ordinary native profile caches. It must be outside the original root and all signed bundles. Nothing is written into the app. Symlinks, unsupported ASAR members, dynamic JavaScript and budget omissions remain explicit. This is a narrow static inspection slice, not general Electron/Swift recovery or evidence of runtime behavior. See [TOOL-CONTRACT.md](TOOL-CONTRACT.md#application-scope-and-bounded-call-traversal) for exact limits, selection, paging, identities and cancellation.
 
-The default directory inventory is bounded to 10,000 entries, depth 16, 128 MiB per file, 512 MiB aggregate hashed bytes and 15 seconds. Published 0.1.9 JavaScript inspection is limited to 1 MiB per component. The unreleased syntax implementation accepts coherent captures up to 8 MiB with bounded, explicitly continued traversal; see the tool contract. Neither establishes module or IPC bindings; unsupported syntax and dynamic values remain explicit. Reopening inventories the selected root again; changed inputs receive different snapshot/component identities. Old captures and evidence remain on disk. In a reopened application session, inventory the root to activate its application evidence scope; reselect the original native component to retrieve its native evidence. Captures whose original bytes no longer match are refused rather than silently rebound.
+The default directory inventory is bounded to 10,000 entries, depth 16, 128 MiB per file, 512 MiB aggregate hashed bytes and 15 seconds. Published 0.1.9 JavaScript inspection is limited to 1 MiB per component and records lexical observations. 0.2.0 profiles accept coherent captures up to 8 MiB with explicit bounded traversal continuation, focused narrow preload bindings, selected-module navigation and source-evidence composition. Their Python parser dependencies install with the package; no JavaScript or app is executed. Source candidates are not established loaded modules or cross-process IPC edges. Unsupported syntax, dynamic replacement and missing context remain explicit; see the tool contract. Reopening inventories the selected root again; changed inputs receive different snapshot/component identities. Old captures and evidence remain on disk. In a reopened application session, inventory the root to activate its application evidence scope; reselect the original native component to retrieve its native evidence. Captures whose original bytes no longer match are refused rather than silently rebound.
 
 ## First result
 
@@ -110,7 +110,7 @@ __attribute__((noinline)) int quote(int n) { return n < 4 ? 19 : n * 7 + 3; }
 int main(int argc, char **argv) { puts("eaos fixture anchor"); return quote(argc); }
 C
 clang -O0 /tmp/eaos-example/example.c -o /tmp/eaos-example/example
-uvx --python 3.13 --from every-app-is-open-source==0.1.9 eaos call /tmp/eaos-example/example open_program
+uvx --python 3.13 --from every-app-is-open-source==0.2.0 eaos call /tmp/eaos-example/example open_program
 ```
 
 Expect `classification: computed`, an ARM64 language, a SHA-256, a positive function count and an evidence ID/file URI. Addresses vary by compiler; never copy an address from somebody else's run.

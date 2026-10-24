@@ -141,7 +141,9 @@ APPLICATION_TOOLS = [
   'one exposed member for a bounded computed binding slice. Unknown loaders/channels stay unresolved. '
   'module_at selects one enclosing literal table-method candidate; module_id explicitly selects '
   'another header in that table. module_kind returns bounded declarations/assignments/functions/calls '
-  'or ancestors (enclosing skeleton, table bodies omitted) as syntax facts. Loader/binding/runtime roles stay unverified. Check coverage.',
+  'or ancestors (enclosing skeleton, table bodies omitted) as syntax facts. relationship_evidence '
+  'projects selected saved inspection ids into bounded source/candidate relationships; no IPC edge '
+  'from equal names/channels. Other inspection modes are separate. Check original scope/limitations.',
   schema({'component_id': S, 'offset': {'type':'integer','minimum':0},
           'limit': {'type':'integer','minimum':1,'maximum':200}, 'view': S,
           'find': {'type':'string','maxLength':256}, 'index_cursor': {'type':'string','maxLength':200},
@@ -150,6 +152,7 @@ APPLICATION_TOOLS = [
           'binding_at': {'type':'integer','minimum':0},
           'api': {'type':'string','minLength':1,'maxLength':128},
           'module_at': {'type':'integer','minimum':0}, 'module_id': {'type':'string','minLength':1,'maxLength':128},
+          'relationship_evidence': {'type':'array','minItems':1,'maxItems':12,'items':{'type':'string','minLength':32,'maxLength':32}},
           'module_kind': {'type':'string','enum':['declarations','assignments','functions','calls','ancestors']}}, ['component_id']))]
 
 SCHEMAS = {name: spec for name, _, spec in TOOLS + APPLICATION_TOOLS}

@@ -68,7 +68,8 @@ class ApplicationSession(McpSession):
                      ('application_snapshot','component_id','source_sha256','parser','index_revision',
                       'view','matches','next_offset','coverage','resource_limits','binding_identity',
                       'binding_schema','focus','namespace','lexical_callee_origin','callee_origin',
-                      'unresolved','unresolved_total','unresolved_truncated')}
+                      'unresolved','unresolved_total','unresolved_truncated','module_scope',
+                      'module_view_identity','module_schema','scope_coverage','match_scope')}
             preview.update(preview_omitted=True,
                            next='read_evidence with the returned id retrieves this page and its full coverage.')
         return {'classification':'computed','data':preview,'evidence':link,

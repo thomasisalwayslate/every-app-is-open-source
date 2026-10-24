@@ -31,7 +31,13 @@ def main():
         if hashlib.sha256(payload).hexdigest() != config['state_sha256']:
             raise ValueError('Committed syntax state changed')
         previous = json.loads(payload)['progress']
-    if config.get('binding_at') is not None:
+    if config.get('module_at') is not None:
+        from .js_modules import inspect_module
+        payload = {'module': inspect_module(raw,config['module_at'],module_id=config.get('module_id'),
+            kind=config.get('module_kind','declarations'),find=config.get('find',''),
+            offset=config.get('offset',0),limit=config.get('limit',30),view=config.get('view'),
+            namespace_context=config.get('namespace_context'))}
+    elif config.get('binding_at') is not None:
         from .js_bindings import inspect_binding
         payload = {'binding': inspect_binding(raw, config['binding_at'], config.get('api'))}
     else:
